@@ -31,12 +31,23 @@ function useInView(threshold = 0.15) {
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { t, locale, setLocale, isRTL } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Check if user has an active Supabase session
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      const supabase = createClient();
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setIsLoggedIn(!!session);
+      });
+    });
   }, []);
 
   return (
@@ -62,8 +73,17 @@ function Header() {
             <button onClick={() => setLocale("en")} className={`px-3 py-1 rounded-full transition-all duration-200 ${locale === "en" ? "bg-white shadow-sm text-[#1a1a2e]" : "text-[#949aa0]"}`}>EN</button>
             <button onClick={() => setLocale("ar")} className={`px-3 py-1 rounded-full transition-all duration-200 ${locale === "ar" ? "bg-white shadow-sm text-[#1a1a2e]" : "text-[#949aa0]"}`}>{"\u0639\u0631\u0628\u064A"}</button>
           </div>
-          <a href="#" className="hidden md:block text-[#1a1a2e] hover:text-[#de1b23] transition-all duration-200 text-sm font-medium">{t("header", "login")}</a>
-          <a href="#" className="hidden md:block bg-[#de1b23] text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm shadow-[#de1b23]/20 hover:shadow-md hover:shadow-[#de1b23]/30 hover:-translate-y-0.5 hover:bg-[#c41820] transition-all duration-300 ease-out">{t("header", "getStarted")}</a>
+          {isLoggedIn ? (
+            <Link href="/dashboard" className="hidden md:flex items-center gap-2 border border-[#e5e7eb] text-[#1a1a2e] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#f6f9fa] transition-all duration-200">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+              {t("header", "goToDashboard")}
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="hidden md:block text-[#1a1a2e] hover:text-[#de1b23] transition-all duration-200 text-sm font-medium">{t("header", "login")}</Link>
+              <Link href="/login" className="hidden md:block bg-[#de1b23] text-white px-5 py-2 rounded-full text-sm font-medium shadow-sm shadow-[#de1b23]/20 hover:shadow-md hover:shadow-[#de1b23]/30 hover:-translate-y-0.5 hover:bg-[#c41820] transition-all duration-300 ease-out">{t("header", "getStarted")}</Link>
+            </>
+          )}
           {/* Mobile hamburger */}
           <button
             type="button"
@@ -90,8 +110,17 @@ function Header() {
           </div>
           <hr className="border-gray-100" />
           <div className="flex items-center gap-3 pt-1">
-            <a href="#" className="text-sm font-medium text-[#1a1a2e]">{t("header", "login")}</a>
-            <a href="#" className="bg-[#de1b23] text-white px-5 py-2 rounded-full text-sm font-medium">{t("header", "getStarted")}</a>
+            {isLoggedIn ? (
+              <Link href="/dashboard" className="flex items-center gap-2 border border-[#e5e7eb] text-[#1a1a2e] px-4 py-2 rounded-full text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                {t("header", "goToDashboard")}
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-medium text-[#1a1a2e]" onClick={() => setMobileOpen(false)}>{t("header", "login")}</Link>
+                <Link href="/login" className="bg-[#de1b23] text-white px-5 py-2 rounded-full text-sm font-medium" onClick={() => setMobileOpen(false)}>{t("header", "getStarted")}</Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -147,9 +176,9 @@ function HeroSection() {
           {t("hero", "subtitle")}
         </p>
 
-        <a href="#" className="inline-flex items-center gap-2 bg-[#de1b23] text-white px-10 py-4 rounded-full font-semibold uppercase text-sm tracking-wider shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30 hover:-translate-y-0.5 hover:bg-[#c41820] transition-all duration-300 ease-out">
+        <Link href="/login" className="inline-flex items-center gap-2 bg-[#de1b23] text-white px-10 py-4 rounded-full font-semibold uppercase text-sm tracking-wider shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30 hover:-translate-y-0.5 hover:bg-[#c41820] transition-all duration-300 ease-out">
           {t("hero", "cta")}
-        </a>
+        </Link>
 
       </div>
 
@@ -1566,10 +1595,10 @@ function CTASection() {
             {t("cta", "subtitle")}
           </p>
           <div className="pt-2">
-            <a href="#" className="inline-flex items-center gap-2 bg-[#de1b23] text-white font-semibold px-10 py-4 rounded-full uppercase text-sm tracking-wider hover:bg-[#c41820] transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30">
+            <Link href="/login" className="inline-flex items-center gap-2 bg-[#de1b23] text-white font-semibold px-10 py-4 rounded-full uppercase text-sm tracking-wider hover:bg-[#c41820] transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30">
               {t("cta", "button")}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
