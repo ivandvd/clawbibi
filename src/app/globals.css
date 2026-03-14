@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --clawbibi-red: #de1b23;
+  --clawbibi-dark: #1a1a2e;
+  --clawbibi-gray: #949aa0;
+  --clawbibi-light: #f6f9fa;
+  --clawbibi-border: #e5e7eb;
+}
+
+body {
+  font-family: 'Inter', 'IBM Plex Sans Arabic', sans-serif;
+}
+
+[dir="rtl"] body {
+  font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
+  background-color: var(--clawbibi-light);
+  color: var(--clawbibi-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--clawbibi-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c5c9cd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--clawbibi-gray);
+}
+
+/* FAQ accordion animation */
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+/* Status pulse ring (green connected dots) */
+@keyframes statusPulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(46, 125, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
+}
+
+.status-pulse {
+  animation: statusPulseRing 2s ease-in-out infinite;
+}
+
+/* Typing indicator dots */
+@keyframes typingDot {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-4px); }
+}
+
+.typing-dot {
+  width: 5px;
+  height: 5px;
+  background: #949aa0;
+  border-radius: 50%;
+  display: inline-block;
+  animation: typingDot 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* Hero background gentle float */
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.gentle-float {
+  animation: gentleFloat 6s ease-in-out infinite;
+}
+
+/* Marquee scrolling */
+@keyframes marqueeLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marqueeRight {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.marquee-left {
+  animation: marqueeLeft 30s linear infinite;
+}
+
+.marquee-right {
+  animation: marqueeRight 30s linear infinite;
+}
+
+.marquee-left:hover, .marquee-right:hover {
+  animation-play-state: paused;
+}
+
+/* Slide in from left */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Terminal cursor */
+@keyframes terminalBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.terminal-cursor {
+  animation: terminalBlink 1s step-end infinite;
+}
