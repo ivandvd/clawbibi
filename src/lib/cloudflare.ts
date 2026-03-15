@@ -27,14 +27,14 @@ export interface CloudflareDnsRecord {
 }
 
 // Create an A record: subdomain → IP
-// e.g. "abc123.clawbibi.app" → "1.2.3.4"
+// e.g. "abc123.clawbibi.cloud" → "1.2.3.4"
 export async function createDnsRecord(subdomain: string, ip: string): Promise<CloudflareDnsRecord> {
   const res = await fetch(`${CF_API}/zones/${getZoneId()}/dns_records`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
       type: "A",
-      name: subdomain,   // full subdomain e.g. "abc123.clawbibi.app"
+      name: subdomain,   // full subdomain e.g. "abc123.clawbibi.cloud"
       content: ip,
       ttl: 60,
       proxied: false,    // not proxied — OpenClaw needs direct connection
