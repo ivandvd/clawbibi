@@ -12,6 +12,8 @@ export const profiles = pgTable("profiles", {
   role: text("role").default("user"), // user | admin
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  paddleCustomerId: text("paddle_customer_id"),
+  paddleSubscriptionId: text("paddle_subscription_id"),
   planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

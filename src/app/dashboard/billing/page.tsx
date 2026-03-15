@@ -134,7 +134,7 @@ const PLAN_META: PlanMeta[] = [
   },
 ];
 
-type PayMethod = "stripe" | "tap";
+type PayMethod = "paddle" | "stripe" | "tap";
 
 // ── Main page ─────────────────────────────────────────────────────────────
 
@@ -151,7 +151,7 @@ function BillingPageInner() {
   const [hasStripeSub, setHasStripeSub]   = useState(false);
   const [loadingPlan, setLoadingPlan]     = useState(true);
   const [agentCount, setAgentCount]       = useState(0);
-  const [payMethod, setPayMethod]         = useState<PayMethod>("stripe");
+  const [payMethod, setPayMethod]         = useState<PayMethod>("paddle");
   const [checkingOut, setCheckingOut]     = useState<string | null>(null);
   const [managingBilling, setManagingBilling] = useState(false);
   const [banner, setBanner]               = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -405,8 +405,27 @@ function BillingPageInner() {
       {/* Payment Method Selector */}
       <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5 mb-6 animate-fade-up animate-delay-150">
         <p className="text-sm font-semibold text-[#1a1a2e] mb-3">{t("billing", "paymentMethod")}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* International Card */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Paddle — International */}
+          <button
+            onClick={() => setPayMethod("paddle")}
+            className={`relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-300 ${
+              payMethod === "paddle" ? "border-[#de1b23] bg-[#fef2f2] shadow-sm" : "border-[#e5e7eb] hover:border-[#de1b23]/30 bg-white"
+            }`}
+          >
+            <span className={`absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${
+              payMethod === "paddle" ? "bg-[#de1b23] scale-100 opacity-100" : "scale-75 opacity-0"
+            }`}>
+              <CheckIcon className="w-3 h-3 text-white" />
+            </span>
+            <p className={`text-sm font-semibold pr-7 transition-colors duration-200 ${payMethod === "paddle" ? "text-[#de1b23]" : "text-[#1a1a2e]"}`}>
+              {isRTL ? "دفع دولي" : "International"}
+            </p>
+            <div className="flex items-center gap-2">
+              <VisaLogo /><MastercardLogo /><AmexLogo />
+            </div>
+          </button>
+          {/* Stripe */}
           <button
             onClick={() => setPayMethod("stripe")}
             className={`relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-300 ${
@@ -684,7 +703,9 @@ function BillingPageInner() {
                     </button>
                     {relation !== "current" && (
                       <p className="text-center text-[10px] text-[#c5c9cd] mt-1.5 transition-all duration-300">
-                        {payMethod === "stripe"
+                        {payMethod === "paddle"
+                          ? (isRTL ? "عبر Paddle" : "via Paddle")
+                          : payMethod === "stripe"
                           ? (isRTL ? "عبر Stripe" : "via Stripe")
                           : (isRTL ? "عبر Tap Payments" : "via Tap Payments")}
                       </p>
