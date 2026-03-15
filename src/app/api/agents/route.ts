@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   // ────────────────────────────────────────────────────────────────────────
 
   const id = nanoid(8);
-  const subdomain = `${id}.clawbibi.app`;
+  const subdomain = `${id}.clawbibi.cloud`;
 
   // Determine AI provider from model string
   const modelId = model || "claude-4.5";

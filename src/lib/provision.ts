@@ -253,7 +253,7 @@ process.on('unhandledRejection', (e) => console.error('[runtime] Unhandled rejec
 // Build the cloud-init script that runs on first boot.
 // Installs the Clawbibi runtime, sets up SSH access, and starts the agent.
 function buildCloudInit(agentId: string, model: string, apiKeys?: Record<string, string>): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://clawbibi.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://clawbibi.cloud";
   const secret = process.env.PROVISION_WEBHOOK_SECRET ?? "";
   const sshPubKey = process.env.PROVISION_SSH_PUBLIC_KEY ?? "";
 

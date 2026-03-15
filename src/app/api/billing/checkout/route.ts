@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   }
 
   const plan = PLANS[planId as keyof typeof PLANS];
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://clawbibi.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://clawbibi.cloud";
 
   // ── Stripe ───────────────────────────────────────────────────────────────
   if (method === "stripe") {
