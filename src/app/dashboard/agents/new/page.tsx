@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -9,7 +9,7 @@ const models = [
   {
     id: "claude-4.5",
     name: "Claude 4.5 Sonnet",
-    desc: "Fast, intelligent, best for most tasks",
+    descKey: "modelDescClaude" as const,
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -20,7 +20,7 @@ const models = [
   {
     id: "claude-opus",
     name: "Claude Opus",
-    desc: "Most powerful, complex reasoning",
+    descKey: "modelDescOpus" as const,
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
@@ -30,7 +30,7 @@ const models = [
   {
     id: "gpt-4o",
     name: "GPT-4o",
-    desc: "OpenAI's flagship multimodal model",
+    descKey: "modelDescGpt" as const,
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
@@ -40,7 +40,7 @@ const models = [
   {
     id: "gemini-2.5",
     name: "Gemini 2.5 Pro",
-    desc: "Google's most capable model",
+    descKey: "modelDescGemini" as const,
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
@@ -92,6 +92,19 @@ const channels = [
   },
 ];
 
+const MODEL_KEY_LABEL: Record<string, string> = {
+  "claude-4.5":  "Anthropic API Key",
+  "claude-opus": "Anthropic API Key",
+  "gpt-4o":      "OpenAI API Key",
+  "gemini-2.5":  "Google AI API Key",
+};
+const MODEL_KEY_PLACEHOLDER: Record<string, string> = {
+  "claude-4.5":  "sk-ant-...",
+  "claude-opus": "sk-ant-...",
+  "gpt-4o":      "sk-...",
+  "gemini-2.5":  "AIza...",
+};
+
 export default function CreateAgentPage() {
   const { t, isRTL } = useLanguage();
   const router = useRouter();
@@ -99,7 +112,21 @@ export default function CreateAgentPage() {
   const [name, setName] = useState("");
   const [model, setModel] = useState("claude-4.5");
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [apiKey, setApiKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [plan, setPlan] = useState<string>("none");
+
+  // Detect if user is on BYOK — they must provide an API key
+  const isByok = plan === "byok";
+
+  useEffect(() => {
+    fetch("/api/billing/status")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.plan) setPlan(d.plan); })
+      .catch(() => {});
+  }, []);
 
   const toggleChannel = (id: string) => {
     setSelectedChannels((prev) =>
@@ -109,18 +136,29 @@ export default function CreateAgentPage() {
 
   const handleCreate = async () => {
     setCreating(true);
+    setCreateError(null);
     try {
+      const body: Record<string, unknown> = { name, model, channels: selectedChannels };
+      if (isByok && apiKey.trim()) {
+        body.api_key = apiKey.trim();
+      }
       const res = await fetch("/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, model, channels: selectedChannels }),
+        body: JSON.stringify(body),
       });
+      const data = await res.json();
       if (res.ok) {
-        const agent = await res.json();
-        router.push(`/dashboard/agents/${agent.id}`);
+        router.push(`/dashboard/agents/${data.id}`);
+        return;
+      }
+      if (res.status === 403 && data.upgradeRequired) {
+        setCreateError("upgrade");
+      } else {
+        setCreateError(data.error ?? "Something went wrong. Please try again.");
       }
     } catch {
-      // handle error
+      setCreateError("Could not connect. Please check your internet and try again.");
     }
     setCreating(false);
   };
@@ -172,28 +210,40 @@ export default function CreateAgentPage() {
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-3 mb-8 animate-fade-up animate-delay-100">
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
+      <div className="flex items-center gap-2 mb-8 animate-fade-up animate-delay-100">
+        {/* Step 1 */}
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
           step === 1 ? "bg-[#de1b23] text-white shadow-md shadow-[#de1b23]/25" : "bg-emerald-50 text-emerald-600"
         }`}>
-          {step > 1 ? (
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
-          )}
+          {step > 1
+            ? <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            : <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[9px]">1</span>
+          }
           {t("agents", "step1")}
         </div>
-        <div className="flex-1 h-px bg-[#e5e7eb] max-w-12" />
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
-          step === 2 ? "bg-[#de1b23] text-white shadow-md shadow-[#de1b23]/25" : "bg-[#f6f9fa] text-[#949aa0]"
+        <div className="flex-1 h-px bg-[#e5e7eb] max-w-8" />
+        {/* Step 2 */}
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
+          step === 2 ? "bg-[#de1b23] text-white shadow-md shadow-[#de1b23]/25" : step > 2 ? "bg-emerald-50 text-emerald-600" : "bg-[#f6f9fa] text-[#949aa0]"
         }`}>
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-            step === 2 ? "bg-white/20" : "bg-[#e5e7eb]"
-          }`}>2</span>
+          {step > 2
+            ? <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            : <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${step === 2 ? "bg-white/20" : "bg-[#e5e7eb]"}`}>2</span>
+          }
           {t("agents", "step2")}
         </div>
+        {/* Step 3 — only for BYOK */}
+        {isByok && (
+          <>
+            <div className="flex-1 h-px bg-[#e5e7eb] max-w-8" />
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              step === 3 ? "bg-[#de1b23] text-white shadow-md shadow-[#de1b23]/25" : "bg-[#f6f9fa] text-[#949aa0]"
+            }`}>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${step === 3 ? "bg-white/20" : "bg-[#e5e7eb]"}`}>3</span>
+              API Key
+            </div>
+          </>
+        )}
       </div>
 
       {step === 1 ? (
@@ -241,7 +291,7 @@ export default function CreateAgentPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-[#1a1a2e]">{m.name}</p>
-                      <p className="text-xs text-[#949aa0] mt-0.5">{m.desc}</p>
+                      <p className="text-xs text-[#949aa0] mt-0.5">{t("agents", m.descKey)}</p>
                     </div>
                   </div>
                 </button>
@@ -268,6 +318,7 @@ export default function CreateAgentPage() {
               {t("agents", "channelsDesc")}
             </p>
             <div className="grid grid-cols-2 gap-3">
+
               {channels.map((ch) => (
                 <button
                   key={ch.id}
@@ -295,7 +346,29 @@ export default function CreateAgentPage() {
                 </button>
               ))}
             </div>
+            {selectedChannels.length > 0 && (
+              <p className="mt-3 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg flex items-center gap-2">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                After creation you&apos;ll be taken to set up each channel — one at a time with a step-by-step guide.
+              </p>
+            )}
           </div>
+
+          {/* Error banners */}
+          {createError === "upgrade" && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+              <p className="font-semibold text-amber-800 mb-1">Agent limit reached</p>
+              <p className="text-amber-700 text-xs mb-3">You&apos;ve reached the agent limit on your current plan. Upgrade to create more agents.</p>
+              <a href="/dashboard/billing" className="inline-block px-4 py-2 rounded-lg bg-[#de1b23] text-white text-xs font-semibold hover:bg-[#c41820] transition-colors">
+                View Plans →
+              </a>
+            </div>
+          )}
+          {createError && createError !== "upgrade" && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+              {createError}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button
@@ -304,11 +377,95 @@ export default function CreateAgentPage() {
             >
               {t("agents", "back")}
             </button>
+            {isByok ? (
+              <button
+                onClick={() => setStep(3)}
+                className="flex-1 py-3.5 rounded-xl bg-[#de1b23] text-white font-semibold text-sm hover:bg-[#c41820] hover:shadow-lg hover:shadow-[#de1b23]/25 hover:-translate-y-0.5 transition-all duration-300"
+              >
+                Next: API Key
+              </button>
+            ) : (
+              <button
+                onClick={handleCreate}
+                disabled={creating}
+                className="flex-1 py-3.5 rounded-xl bg-[#de1b23] text-white font-semibold text-sm hover:bg-[#c41820] hover:shadow-lg hover:shadow-[#de1b23]/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50"
+              >
+                {creating
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                  : t("agents", "create")
+                }
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 3: API Key (BYOK only) ── */}
+      {step === 3 && (
+        <div className="space-y-6 animate-fade-up">
+          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-[#de1b23]/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-[#de1b23]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#1a1a2e]">Your API Key (Required)</h3>
+                <p className="text-xs text-[#949aa0] mt-1">
+                  On the BYOK plan, you provide your own API key. It&apos;s encrypted and pushed directly to your server via SSH — we never store it in plain text.
+                </p>
+              </div>
+            </div>
+
+            <label className="block text-xs font-medium text-[#4a4a5a] mb-1.5">
+              {MODEL_KEY_LABEL[model] ?? "API Key"}
+            </label>
+            <div className="relative">
+              <input
+                type={showKey ? "text" : "password"}
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                placeholder={MODEL_KEY_PLACEHOLDER[model] ?? "Your API key..."}
+                className="w-full px-4 py-3 rounded-xl border border-[#e5e7eb] bg-[#f6f9fa] text-sm placeholder:text-[#c5c9cd] focus:outline-none focus:ring-2 focus:ring-[#de1b23]/20 focus:border-[#de1b23] transition-all font-mono pr-10"
+                dir="ltr"
+              />
+              <button type="button" onClick={() => setShowKey(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#949aa0] hover:text-[#1a1a2e]">
+                {showKey
+                  ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                  : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                }
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-[#949aa0]">
+              Your key is pushed securely via SSH and used only by your private agent server.
+            </p>
+          </div>
+
+          {createError === "upgrade" && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+              <p className="font-semibold text-amber-800 mb-1">Agent limit reached</p>
+              <p className="text-amber-700 text-xs mb-3">Upgrade to create more agents.</p>
+              <a href="/dashboard/billing" className="inline-block px-4 py-2 rounded-lg bg-[#de1b23] text-white text-xs font-semibold hover:bg-[#c41820] transition-colors">View Plans →</a>
+            </div>
+          )}
+          {createError && createError !== "upgrade" && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{createError}</div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep(2)} className="flex-1 py-3.5 rounded-xl border-2 border-[#e5e7eb] text-[#949aa0] font-semibold text-sm hover:bg-[#f6f9fa] hover:border-[#c5c9cd] transition-all duration-300">
+              {t("agents", "back")}
+            </button>
             <button
               onClick={handleCreate}
-              className="flex-1 py-3.5 rounded-xl bg-[#de1b23] text-white font-semibold text-sm hover:bg-[#c41820] hover:shadow-lg hover:shadow-[#de1b23]/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
+              disabled={creating || !apiKey.trim()}
+              className="flex-1 py-3.5 rounded-xl bg-[#de1b23] text-white font-semibold text-sm hover:bg-[#c41820] hover:shadow-lg hover:shadow-[#de1b23]/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50"
             >
-              {t("agents", "create")}
+              {creating
+                ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                : t("agents", "create")
+              }
             </button>
           </div>
         </div>

@@ -8,8 +8,11 @@ export const profiles = pgTable("profiles", {
   locale: text("locale").default("ar"),
   timezone: text("timezone").default("Asia/Dubai"),
   country: text("country").default("AE"),
-  plan: text("plan").default("none"), // none | basic | pro | ultra
+  plan: text("plan").default("none"), // none | byok | managed | enterprise
   role: text("role").default("user"), // user | admin
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -19,7 +22,7 @@ export const agents = pgTable("agents", {
     .references(() => profiles.id, { onDelete: "cascade" })
     .notNull(),
   name: text("name").notNull(),
-  status: text("status").default("creating"), // creating | running | stopping | stopped | error
+  status: text("status").default("creating"), // creating | provisioning | running | stopping | stopped | error
   subdomain: text("subdomain").unique(),
   ip: text("ip"),
   provider: text("provider").default("hetzner"),
@@ -29,6 +32,9 @@ export const agents = pgTable("agents", {
   maxTokens: integer("max_tokens").default(4096),
   storageMb: integer("storage_mb").default(0),
   uptimeMins: integer("uptime_mins").default(0),
+  apiKeys: jsonb("api_keys"),       // { anthropic?, openai?, google? }
+  soulMd: text("soul_md"),          // agent personality / system prompt
+  skills: jsonb("skills"),          // { builtin: { "web-search": true }, custom: [] }
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

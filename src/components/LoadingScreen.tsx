@@ -1,4 +1,10 @@
+"use client";
+
+import { useLanguage } from "@/i18n/LanguageContext";
+
 export function LoadingScreen() {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-[#f6f9fa] flex flex-col items-center justify-center loading-fade-in">
       {/* Logo */}
@@ -35,7 +41,7 @@ export function LoadingScreen() {
             strokeDashoffset="10"
           />
         </svg>
-        <span className="text-sm text-[#949aa0]">Loading</span>
+        <span className="text-sm text-[#949aa0]">{t("common", "loading")}</span>
         <span className="flex gap-0.5">
           <span className="w-1 h-1 rounded-full bg-[#949aa0] loading-dot" />
           <span className="w-1 h-1 rounded-full bg-[#949aa0] loading-dot" />

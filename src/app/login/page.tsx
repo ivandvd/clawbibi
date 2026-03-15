@@ -56,7 +56,7 @@ export default function LoginPage() {
         window.location.href = data.url;
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("common", "somethingWentWrong"));
     }
   };
 

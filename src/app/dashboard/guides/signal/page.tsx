@@ -9,11 +9,11 @@ export default function SignalGuidePage() {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Back link */}
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-[#949aa0] hover:text-[#1a1a2e] transition-colors mb-6 animate-fade-up">
+      <Link href="/dashboard/guides" className="inline-flex items-center gap-2 text-sm text-[#949aa0] hover:text-[#1a1a2e] transition-colors mb-6 animate-fade-up">
         <svg className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        {t("troubleshooting", "backToDashboard")}
+        {t("troubleshooting", "backToGuides")}
       </Link>
 
       {/* Header */}

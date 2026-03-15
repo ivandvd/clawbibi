@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { nanoid } from "nanoid";
+import { provisionAgent } from "@/lib/provision";
+import { getAgentLimit } from "@/lib/billing/plans";
+import { rateLimit } from "@/lib/rateLimit";
 
 // GET /api/agents — list user's agents
 export async function GET() {
@@ -10,8 +14,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // For now, return empty array (agents will be stored in Supabase)
-  // TODO: Replace with Drizzle query when DB is connected
   const { data: agents, error } = await supabase
     .from("agents")
     .select("*")
@@ -19,14 +21,13 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    // Table might not exist yet — return empty
-    return NextResponse.json([]);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json(agents || []);
 }
 
-// POST /api/agents — create new agent
+// POST /api/agents — create new agent + trigger server provisioning
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -35,24 +36,71 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Rate-limit: max 5 agent creates per user per hour
+  const rl = rateLimit(`create-agent:${user.id}`, 5, 60 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests — wait before creating another agent" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000)) } }
+    );
+  }
+
   const body = await request.json();
-  const { name, model, channels } = body;
+  const { name, model, api_key } = body;
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  // Generate a simple ID
-  const id = Math.random().toString(36).substring(2, 10);
+  // ── Plan limit check ─────────────────────────────────────────────────────
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+
+  const userPlan = profile?.plan ?? "none";
+  const agentLimit = getAgentLimit(userPlan);
+
+  const { count: agentCount } = await supabase
+    .from("agents")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if ((agentCount ?? 0) >= agentLimit) {
+    return NextResponse.json(
+      {
+        error: "Agent limit reached",
+        plan: userPlan,
+        limit: agentLimit,
+        upgradeRequired: true,
+      },
+      { status: 403 }
+    );
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
+  const id = nanoid(8);
+  const subdomain = `${id}.clawbibi.app`;
+
+  // Determine AI provider from model string
+  const modelId = model || "claude-4.5";
+  const apiKeys: Record<string, string> = {};
+  if (api_key?.trim()) {
+    if (modelId.startsWith("gpt")) apiKeys.openai = api_key.trim();
+    else if (modelId.startsWith("gemini")) apiKeys.google = api_key.trim();
+    else apiKeys.anthropic = api_key.trim();
+  }
 
   const agent = {
     id,
     user_id: user.id,
     name: name.trim(),
-    model: model || "claude-4.5",
+    model: modelId,
     status: "creating",
-    subdomain: `${id}.dev.clawbibi.app`,
-    created_at: new Date().toISOString(),
+    subdomain,
+    provider: "hetzner",
+    ...(api_key?.trim() ? { api_keys: apiKeys } : {}),
   };
 
   const { data, error } = await supabase
@@ -62,9 +110,14 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    // If table doesn't exist, return mock data
-    return NextResponse.json(agent);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data || agent);
+  // Trigger server provisioning in the background (non-blocking)
+  // Requires: HETZNER_API_KEY, CLOUDFLARE_API_KEY, CLOUDFLARE_ZONE_ID, SUPABASE_SERVICE_ROLE_KEY
+  provisionAgent(id, modelId, subdomain, Object.keys(apiKeys).length ? apiKeys : undefined).catch((err) => {
+    console.error(`Provisioning failed for agent ${id}:`, err);
+  });
+
+  return NextResponse.json(data);
 }

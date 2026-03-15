@@ -1,25 +1,43 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 export default function ProfilePage() {
   const { t, locale, setLocale } = useLanguage();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [timezone, setTimezone] = useState("Asia/Dubai");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const supabase = createClient();
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (!user) return;
+      setEmail(user.email || "");
+      // Prefer profiles table as source of truth
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, locale, timezone")
+        .eq("id", user.id)
+        .single();
+      if (profile) {
+        setName(profile.name || user.user_metadata?.full_name || "");
+        if (profile.timezone) setTimezone(profile.timezone);
+        if (profile.locale && !localStorage.getItem("clawbibi-lang")) {
+          setLocale(profile.locale as "en" | "ar");
+        }
+      } else {
         setName(user.user_metadata?.full_name || user.user_metadata?.name || "");
-        setEmail(user.email || "");
       }
     }
     load();
@@ -29,12 +47,43 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
-    await supabase.auth.updateUser({
-      data: { full_name: name },
-    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // Update profiles table (source of truth for dashboard + billing)
+      await supabase
+        .from("profiles")
+        .update({ name, locale, timezone })
+        .eq("id", user.id);
+      // Also sync to auth metadata for consistency
+      await supabase.auth.updateUser({ data: { full_name: name, timezone } });
+    }
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Delete all user agents
+      await supabase.from("agents").delete().eq("user_id", user.id);
+      // Delete profile
+      await supabase.from("profiles").delete().eq("id", user.id);
+      // Sign out (account deletion requires admin SDK on server, so we call the API route)
+      const res = await fetch("/api/profile/delete", { method: "DELETE" });
+      if (!res.ok) throw new Error("Server error");
+
+      await supabase.auth.signOut();
+      router.replace("/");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete account");
+      setDeleting(false);
+    }
   };
 
   const initial = name ? name[0]?.toUpperCase() : email?.[0]?.toUpperCase() || "?";
@@ -199,6 +248,56 @@ export default function ProfilePage() {
               t("profile", "save")
             )}
           </button>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="bg-white rounded-2xl border border-red-200 overflow-hidden animate-fade-up">
+          <div className="px-6 py-4 border-b border-red-100 bg-red-50/50">
+            <h2 className="text-sm font-bold text-red-700">Danger Zone</h2>
+            <p className="text-xs text-red-500 mt-0.5">These actions are irreversible</p>
+          </div>
+          <div className="px-6 py-5">
+            <p className="text-sm text-[#949aa0] mb-4">
+              Deleting your account will permanently remove all your agents, channels, and data. This cannot be undone.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-[#1a1a2e] mb-1.5 block">
+                  Type <code className="bg-[#f6f9fa] px-1.5 py-0.5 rounded font-mono text-red-600">DELETE</code> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirm}
+                  onChange={(e) => { setDeleteConfirm(e.target.value); setDeleteError(""); }}
+                  placeholder="DELETE"
+                  className="w-full px-4 py-3 rounded-xl border border-red-200 bg-red-50/30 text-[#1a1a2e] placeholder:text-[#c5c9cd] focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all text-sm font-mono"
+                  dir="ltr"
+                />
+              </div>
+              {deleteError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {deleteError}
+                </p>
+              )}
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirm !== "DELETE" || deleting}
+                className="w-full py-3 rounded-xl font-semibold text-sm bg-red-600 text-white hover:bg-red-700 hover:shadow-lg hover:shadow-red-600/25 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
+              >
+                {deleting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Deleting account...
+                  </span>
+                ) : (
+                  "Delete My Account"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
