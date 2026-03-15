@@ -1,9 +1,9 @@
 // Server provisioning logic
-// Called when a user creates an agent — spins up a Hetzner VPS,
+// Called when a user creates an agent — spins up a DigitalOcean Droplet,
 // installs the Clawbibi Agent Runtime via cloud-init, and creates a Cloudflare DNS record.
 // Runs in the background (non-blocking from the API route).
 
-import { createServer, deleteServer } from "./hetzner";
+import { createDroplet, deleteDroplet, waitForDropletIp } from "./digitalocean";
 import { createDnsRecord, deleteDnsRecord } from "./cloudflare";
 import { createAdminClient } from "./supabase/admin";
 
@@ -374,10 +374,10 @@ export async function provisionAgent(
   subdomain: string,
   apiKeys?: Record<string, string>
 ): Promise<void> {
-  if (!process.env.HETZNER_API_KEY || !process.env.CLOUDFLARE_API_KEY) {
+  if (!process.env.DO_API_KEY || !process.env.CLOUDFLARE_API_KEY) {
     console.warn(
       `[provision] Skipping real provisioning for agent ${agentId} — ` +
-      `HETZNER_API_KEY or CLOUDFLARE_API_KEY not set.`
+      `DO_API_KEY or CLOUDFLARE_API_KEY not set.`
     );
     return;
   }
@@ -388,15 +388,17 @@ export async function provisionAgent(
     console.log(`[provision] Starting provisioning for agent ${agentId}...`);
 
     const userData = buildCloudInit(agentId, model, apiKeys);
-    const server = await createServer({ name: `clawbibi-${agentId}`, userData });
+    const droplet = await createDroplet({ name: `clawbibi-${agentId}`, userData });
 
-    const ip = server.public_net.ipv4?.ip;
-    if (!ip) throw new Error("No IPv4 address returned from Hetzner");
+    console.log(`[provision] Droplet created: id=${droplet.id}, waiting for IP...`);
 
-    console.log(`[provision] Server created: id=${server.id}, ip=${ip}`);
+    // DigitalOcean assigns IPs asynchronously — poll until available
+    const ip = await waitForDropletIp(droplet.id);
+
+    console.log(`[provision] Droplet ready: id=${droplet.id}, ip=${ip}`);
 
     await db.from("agents").update({
-      server_id: String(server.id),
+      server_id: String(droplet.id),
       ip,
       status: "provisioning",
     }).eq("id", agentId);
@@ -421,9 +423,9 @@ export async function deprovisionAgent(
   const db = createAdminClient();
 
   try {
-    if (serverId && process.env.HETZNER_API_KEY) {
-      await deleteServer(Number(serverId));
-      console.log(`[deprovision] Deleted server ${serverId} for agent ${agentId}`);
+    if (serverId && process.env.DO_API_KEY) {
+      await deleteDroplet(Number(serverId));
+      console.log(`[deprovision] Deleted droplet ${serverId} for agent ${agentId}`);
     }
     if (subdomain && process.env.CLOUDFLARE_API_KEY) {
       await deleteDnsRecord(subdomain);
