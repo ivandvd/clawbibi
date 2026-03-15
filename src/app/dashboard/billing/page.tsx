@@ -31,48 +31,6 @@ function AmexLogo() {
     </svg>
   );
 }
-function MadaLogo() {
-  return (
-    <svg viewBox="0 0 54 18" className="h-5 flex-shrink-0" aria-label="Mada">
-      <rect width="54" height="18" rx="3" fill="#00A884" />
-      <text x="27" y="13" textAnchor="middle" fill="white" fontSize="10" fontWeight="700" fontFamily="Arial">mada</text>
-    </svg>
-  );
-}
-function STCPayLogo() {
-  return (
-    <svg viewBox="0 0 66 18" className="h-5 flex-shrink-0" aria-label="STC Pay">
-      <rect width="66" height="18" rx="3" fill="#7B2D8B" />
-      <text x="33" y="13" textAnchor="middle" fill="white" fontSize="8.5" fontWeight="700" fontFamily="Arial">STC Pay</text>
-    </svg>
-  );
-}
-function KNETLogo() {
-  return (
-    <svg viewBox="0 0 54 18" className="h-5 flex-shrink-0" aria-label="KNET">
-      <rect width="54" height="18" rx="3" fill="#006DB7" />
-      <text x="27" y="13" textAnchor="middle" fill="white" fontSize="10" fontWeight="700" fontFamily="Arial">KNET</text>
-    </svg>
-  );
-}
-function ApplePayLogo() {
-  return (
-    <svg viewBox="0 0 66 18" className="h-5 flex-shrink-0" aria-label="Apple Pay">
-      <rect width="66" height="18" rx="3" fill="#000000" />
-      <text x="33" y="13" textAnchor="middle" fill="white" fontSize="8" fontWeight="400" fontFamily="-apple-system, Arial">Apple Pay</text>
-    </svg>
-  );
-}
-
-// ── Check icon ────────────────────────────────────────────────────────────
-
-function CheckIcon({ className = "w-3 h-3", dark = false }: { className?: string; dark?: boolean }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke={dark ? "#de1b23" : "currentColor"} strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
 
 // ── Plan data ─────────────────────────────────────────────────────────────
 
@@ -134,7 +92,7 @@ const PLAN_META: PlanMeta[] = [
   },
 ];
 
-type PayMethod = "paddle" | "stripe" | "tap";
+type PayMethod = "paddle";
 
 // ── Main page ─────────────────────────────────────────────────────────────
 
@@ -148,10 +106,9 @@ function BillingPageInner() {
   const searchParams = useSearchParams();
 
   const [currentPlan, setCurrentPlan]     = useState<string>("none");
-  const [hasStripeSub, setHasStripeSub]   = useState(false);
   const [loadingPlan, setLoadingPlan]     = useState(true);
   const [agentCount, setAgentCount]       = useState(0);
-  const [payMethod, setPayMethod]         = useState<PayMethod>("paddle");
+  const [payMethod] = useState<PayMethod>("paddle");
   const [checkingOut, setCheckingOut]     = useState<string | null>(null);
   const [managingBilling, setManagingBilling] = useState(false);
   const [banner, setBanner]               = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -161,7 +118,7 @@ function BillingPageInner() {
     const success = searchParams.get("success");
     const canceled = searchParams.get("canceled");
     const plan = searchParams.get("plan");
-    if (success === "stripe" || success === "tap") {
+    if (success === "paddle") {
       const planName = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : "";
       setBanner({
         type: "success",
@@ -182,7 +139,6 @@ function BillingPageInner() {
     ]).then(([status, agents]) => {
       if (status) {
         setCurrentPlan(status.plan ?? "none");
-        setHasStripeSub(!!status.stripeSubscriptionId);
       }
       setAgentCount(Array.isArray(agents) ? agents.length : 0);
       setLoadingPlan(false);
@@ -385,84 +341,34 @@ function BillingPageInner() {
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-sm text-emerald-600 font-medium">{t("billing", "activeBadge")}</span>
               </div>
-              {hasStripeSub && (
-                <button
-                  onClick={handleManageBilling}
-                  disabled={managingBilling}
-                  className="px-4 py-2 rounded-xl border-2 border-[#e5e7eb] text-sm font-semibold text-[#1a1a2e] hover:border-[#de1b23] hover:text-[#de1b23] hover:bg-[#fef2f2] transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {managingBilling
-                    ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    : t("billing", "manageSub")
-                  }
-                </button>
-              )}
+              <button
+                onClick={handleManageBilling}
+                disabled={managingBilling}
+                className="px-4 py-2 rounded-xl border-2 border-[#e5e7eb] text-sm font-semibold text-[#1a1a2e] hover:border-[#de1b23] hover:text-[#de1b23] hover:bg-[#fef2f2] transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
+              >
+                {managingBilling
+                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  : t("billing", "manageSub")
+                }
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Payment Method Selector */}
-      <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5 mb-6 animate-fade-up animate-delay-150">
-        <p className="text-sm font-semibold text-[#1a1a2e] mb-3">{t("billing", "paymentMethod")}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Paddle — International */}
-          <button
-            onClick={() => setPayMethod("paddle")}
-            className={`relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-300 ${
-              payMethod === "paddle" ? "border-[#de1b23] bg-[#fef2f2] shadow-sm" : "border-[#e5e7eb] hover:border-[#de1b23]/30 bg-white"
-            }`}
-          >
-            <span className={`absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${
-              payMethod === "paddle" ? "bg-[#de1b23] scale-100 opacity-100" : "scale-75 opacity-0"
-            }`}>
-              <CheckIcon className="w-3 h-3 text-white" />
-            </span>
-            <p className={`text-sm font-semibold pr-7 transition-colors duration-200 ${payMethod === "paddle" ? "text-[#de1b23]" : "text-[#1a1a2e]"}`}>
-              {isRTL ? "دفع دولي" : "International"}
-            </p>
-            <div className="flex items-center gap-2">
-              <VisaLogo /><MastercardLogo /><AmexLogo />
-            </div>
-          </button>
-          {/* Stripe */}
-          <button
-            onClick={() => setPayMethod("stripe")}
-            className={`relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-300 ${
-              payMethod === "stripe" ? "border-[#de1b23] bg-[#fef2f2] shadow-sm" : "border-[#e5e7eb] hover:border-[#de1b23]/30 bg-white"
-            }`}
-          >
-            <span className={`absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${
-              payMethod === "stripe" ? "bg-[#de1b23] scale-100 opacity-100" : "scale-75 opacity-0"
-            }`}>
-              <CheckIcon className="w-3 h-3 text-white" />
-            </span>
-            <p className={`text-sm font-semibold pr-7 transition-colors duration-200 ${payMethod === "stripe" ? "text-[#de1b23]" : "text-[#1a1a2e]"}`}>
-              {t("billing", "intlCard")}
-            </p>
-            <div className="flex items-center gap-2">
-              <VisaLogo /><MastercardLogo /><AmexLogo />
-            </div>
-          </button>
-          {/* Arab Payments */}
-          <button
-            onClick={() => setPayMethod("tap")}
-            className={`relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-300 ${
-              payMethod === "tap" ? "border-[#de1b23] bg-[#fef2f2] shadow-sm" : "border-[#e5e7eb] hover:border-[#de1b23]/30 bg-white"
-            }`}
-          >
-            <span className={`absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${
-              payMethod === "tap" ? "bg-[#de1b23] scale-100 opacity-100" : "scale-75 opacity-0"
-            }`}>
-              <CheckIcon className="w-3 h-3 text-white" />
-            </span>
-            <p className={`text-sm font-semibold pr-7 transition-colors duration-200 ${payMethod === "tap" ? "text-[#de1b23]" : "text-[#1a1a2e]"}`}>
-              {t("billing", "arabPayments")}
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <MadaLogo /><STCPayLogo /><KNETLogo /><ApplePayLogo />
-            </div>
-          </button>
+      {/* Payment info */}
+      <div className="bg-white rounded-2xl border border-[#e5e7eb] p-5 mb-6 animate-fade-up animate-delay-150 flex items-center gap-4">
+        <div className="w-9 h-9 rounded-xl bg-[#de1b23]/10 flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-[#de1b23]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-[#1a1a2e]">{isRTL ? "الدفع عبر Paddle" : "Payments via Paddle"}</p>
+          <p className="text-xs text-[#949aa0]">{isRTL ? "بطاقة ائتمانية دولية • Visa • Mastercard • Amex" : "International cards accepted • Visa • Mastercard • Amex"}</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <VisaLogo /><MastercardLogo /><AmexLogo />
         </div>
       </div>
 
@@ -703,11 +609,7 @@ function BillingPageInner() {
                     </button>
                     {relation !== "current" && (
                       <p className="text-center text-[10px] text-[#c5c9cd] mt-1.5 transition-all duration-300">
-                        {payMethod === "paddle"
-                          ? (isRTL ? "عبر Paddle" : "via Paddle")
-                          : payMethod === "stripe"
-                          ? (isRTL ? "عبر Stripe" : "via Stripe")
-                          : (isRTL ? "عبر Tap Payments" : "via Tap Payments")}
+                        {isRTL ? "عبر Paddle" : "via Paddle"}
                       </p>
                     )}
                   </>
