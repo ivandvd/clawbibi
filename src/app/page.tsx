@@ -1643,9 +1643,13 @@ function Footer() {
         </div>
 
         <div className="flex items-center justify-center gap-4 text-xs text-[#949aa0]">
-          <a href="#" className="hover:text-[#de1b23] transition-colors">{t("footer", "privacy")}</a>
+          <a href="/privacy" className="hover:text-[#de1b23] transition-colors">{t("footer", "privacy")}</a>
           <span>&middot;</span>
-          <a href="#" className="hover:text-[#de1b23] transition-colors">{t("footer", "terms")}</a>
+          <a href="/terms" className="hover:text-[#de1b23] transition-colors">{t("footer", "terms")}</a>
+          <span>&middot;</span>
+          <a href="/refund" className="hover:text-[#de1b23] transition-colors">Refund</a>
+          <span>&middot;</span>
+          <a href="/pricing" className="hover:text-[#de1b23] transition-colors">Pricing</a>
           <span>&middot;</span>
           <span>{t("footer", "copyright")}</span>
         </div>
