@@ -534,23 +534,26 @@ export default function GatewayPage() {
           </div>
         </div>
 
-        {/* Nav links */}
-        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-          <Link href={`/dashboard/agents/${agentId}/configure`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#de1b23] hover:bg-[#fef2f2] transition-all duration-200 border border-[#e5e7eb]">
+        {/* Tab nav */}
+        <div className="hidden md:flex items-center gap-1 flex-shrink-0 bg-[#f6f9fa] rounded-xl p-1 border border-[#e5e7eb]">
+          <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-[#de1b23] shadow-sm border border-[#e5e7eb]">
+            Overview
+          </span>
+          <Link href={`/dashboard/agents/${agentId}/configure`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#1a1a2e] hover:bg-white transition-all duration-200">
             Configure
           </Link>
-          <Link href={`/dashboard/agents/${agentId}/monitor`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#de1b23] hover:bg-[#fef2f2] transition-all duration-200 border border-[#e5e7eb]">
+          <Link href={`/dashboard/agents/${agentId}/monitor`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#1a1a2e] hover:bg-white transition-all duration-200">
             Monitor
           </Link>
-          <Link href={`/dashboard/agents/${agentId}/logs`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#de1b23] hover:bg-[#fef2f2] transition-all duration-200 border border-[#e5e7eb]">
+          <Link href={`/dashboard/agents/${agentId}/logs`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#1a1a2e] hover:bg-white transition-all duration-200">
             Logs
           </Link>
-          <Link href={`/dashboard/agents/${agentId}/analytics`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#de1b23] hover:bg-[#fef2f2] transition-all duration-200 border border-[#e5e7eb]">
+          <Link href={`/dashboard/agents/${agentId}/analytics`} className="px-3 py-1.5 rounded-lg text-xs text-[#949aa0] font-medium hover:text-[#1a1a2e] hover:bg-white transition-all duration-200">
             Analytics
           </Link>
           <button
             onClick={reload}
-            className="p-1.5 rounded-lg text-[#949aa0] hover:text-[#1a1a2e] hover:bg-[#f6f9fa] transition-all duration-200 border border-[#e5e7eb]"
+            className="p-1.5 rounded-lg text-[#949aa0] hover:text-[#1a1a2e] hover:bg-white transition-all duration-200"
             title="Refresh"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -589,19 +592,19 @@ export default function GatewayPage() {
             </div>
             <div className="flex gap-6 text-right">
               {gateway?.uptime && (
-                <div>
+                <div title="How long the agent server has been running since last restart">
                   <p className="text-xs text-[#949aa0]">Uptime</p>
                   <p className="text-sm font-semibold text-[#1a1a2e]">{gateway.uptime}</p>
                 </div>
               )}
               {gateway?.avgResponseMs != null && (
-                <div>
+                <div title="Average time the agent takes to generate and send a reply">
                   <p className="text-xs text-[#949aa0]">Avg Response</p>
                   <p className="text-sm font-semibold text-[#1a1a2e]">{gateway.avgResponseMs}ms</p>
                 </div>
               )}
               {gateway?.memoryMb != null && (
-                <div className="hidden sm:block">
+                <div className="hidden sm:block" title={`RAM used by the agent process${gateway.memoryLimitMb ? ` (limit: ${gateway.memoryLimitMb} MB)` : ""}`}>
                   <p className="text-xs text-[#949aa0]">Memory</p>
                   <p className="text-sm font-semibold text-[#1a1a2e]">{gateway.memoryMb} MB</p>
                 </div>
@@ -720,6 +723,10 @@ export default function GatewayPage() {
             <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             <h2 className="text-sm font-bold text-amber-800">{pairings.length} Pending Pairing{pairings.length !== 1 ? "s" : ""}</h2>
             <p className="text-xs text-amber-600 ml-1">— Users requesting access</p>
+            <span
+              className="ml-auto w-4 h-4 rounded-full bg-amber-200 text-amber-700 flex items-center justify-center text-[10px] font-bold cursor-help flex-shrink-0"
+              title="Pairing is your whitelist. When someone messages your agent for the first time, they appear here. Approve to allow them in, deny to block."
+            >?</span>
           </div>
           <div className="divide-y divide-[#f6f9fa]">
             {pairings.map((req, i) => {

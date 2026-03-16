@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 // ── Brand Logo SVGs ───────────────────────────────────────────────────────
@@ -94,6 +95,15 @@ const PLAN_META: PlanMeta[] = [
 
 type PayMethod = "paddle";
 
+interface Invoice {
+  id: string;
+  date: string;
+  amount: string;
+  currency: string;
+  status: string;
+  invoiceNumber: string | null;
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────
 
 // ── Plan hierarchy helpers ─────────────────────────────────────────────────
@@ -113,6 +123,8 @@ function BillingPageInner() {
   const [managingBilling, setManagingBilling] = useState(false);
   const [banner, setBanner]               = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [downgradeModal, setDowngradeModal] = useState<{ targetId: string } | null>(null);
+  const [invoices, setInvoices]           = useState<Invoice[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -131,17 +143,20 @@ function BillingPageInner() {
     }
   }, [searchParams, isRTL, t]);
 
-  // Fetch billing status + agent count in parallel
+  // Fetch billing status + agent count + invoices in parallel
   useEffect(() => {
     Promise.all([
       fetch("/api/billing/status").then(r => r.ok ? r.json() : null).catch(() => null),
       fetch("/api/agents").then(r => r.ok ? r.json() : []).catch(() => []),
-    ]).then(([status, agents]) => {
+      fetch("/api/billing/invoices").then(r => r.ok ? r.json() : { invoices: [] }).catch(() => ({ invoices: [] })),
+    ]).then(([status, agents, invoiceData]) => {
       if (status) {
         setCurrentPlan(status.plan ?? "none");
       }
       setAgentCount(Array.isArray(agents) ? agents.length : 0);
+      setInvoices(invoiceData?.invoices ?? []);
       setLoadingPlan(false);
+      setLoadingInvoices(false);
     });
   }, []);
 
@@ -247,6 +262,9 @@ function BillingPageInner() {
                   ? `يرجى حذف ${agentsToRemove} مساعد قبل التخفيض.`
                   : `Please remove ${agentsToRemove} agent${agentsToRemove > 1 ? "s" : ""} before downgrading.`}
               </p>
+              <Link href="/dashboard/agents" className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-red-700 hover:underline">
+                {isRTL ? "← الذهاب للمساعدين" : "Go to Agents →"}
+              </Link>
             </div>
           )}
 
@@ -618,6 +636,52 @@ function BillingPageInner() {
             </div>
           );
         })}
+      </div>
+
+      {/* Invoice History */}
+      <div className="mt-10 animate-fade-up">
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-base font-bold text-[#1a1a2e]">{t("billing", "invoiceHistory")}</h2>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden">
+          {loadingInvoices ? (
+            <div className="divide-y divide-[#f6f9fa]">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="px-6 py-4 flex items-center gap-4">
+                  <div className="h-4 w-24 bg-[#f6f9fa] rounded animate-pulse" />
+                  <div className="h-4 w-16 bg-[#f6f9fa] rounded animate-pulse ml-auto" />
+                </div>
+              ))}
+            </div>
+          ) : invoices.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <p className="text-sm text-[#949aa0]">{t("billing", "noInvoices")}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#f6f9fa]">
+              {invoices.map((inv) => (
+                <div key={inv.id} className="flex items-center gap-4 px-6 py-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#1a1a2e]">
+                      {inv.invoiceNumber ? `#${inv.invoiceNumber}` : inv.id.slice(0, 12)}
+                    </p>
+                    <p className="text-xs text-[#949aa0]">
+                      {new Date(inv.date).toLocaleDateString(isRTL ? "ar" : "en", { year: "numeric", month: "short", day: "numeric" })}
+                    </p>
+                  </div>
+                  <div className="ml-auto flex items-center gap-4">
+                    <span className="text-sm font-semibold text-[#1a1a2e]" dir="ltr">
+                      {inv.currency} {(Number(inv.amount) / 100).toFixed(2)}
+                    </span>
+                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 capitalize">
+                      {inv.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer */}

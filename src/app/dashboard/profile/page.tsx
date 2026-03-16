@@ -16,6 +16,12 @@ export default function ProfilePage() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [agentCount, setAgentCount] = useState<number | null>(null);
+  const [notifWeeklyDigest, setNotifWeeklyDigest] = useState(true);
+  const [notifAgentDown, setNotifAgentDown] = useState(true);
+  const [notifBilling, setNotifBilling] = useState(true);
+  const [savingNotifs, setSavingNotifs] = useState(false);
+  const [savedNotifs, setSavedNotifs] = useState(false);
 
   const supabase = createClient();
 
@@ -32,12 +38,35 @@ export default function ProfilePage() {
         .single();
       if (profile) {
         setName(profile.name || user.user_metadata?.full_name || "");
-        if (profile.timezone) setTimezone(profile.timezone);
+        if (profile.timezone) {
+          setTimezone(profile.timezone);
+        } else {
+          // Auto-detect browser timezone on first load
+          const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          if (detected) setTimezone(detected);
+        }
         if (profile.locale && !localStorage.getItem("clawbibi-lang")) {
           setLocale(profile.locale as "en" | "ar");
         }
       } else {
         setName(user.user_metadata?.full_name || user.user_metadata?.name || "");
+        // Auto-detect timezone for new users
+        const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (detected) setTimezone(detected);
+      }
+      // Fetch agent count for deletion warning
+      const { count } = await supabase
+        .from("agents")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setAgentCount(count ?? 0);
+
+      // Fetch notification prefs
+      const notifRes = await fetch("/api/profile/notifications").then(r => r.ok ? r.json() : null).catch(() => null);
+      if (notifRes) {
+        setNotifWeeklyDigest(notifRes.notifWeeklyDigest ?? true);
+        setNotifAgentDown(notifRes.notifAgentDown ?? true);
+        setNotifBilling(notifRes.notifBilling ?? true);
       }
     }
     load();
@@ -84,6 +113,19 @@ export default function ProfilePage() {
       setDeleteError(err instanceof Error ? err.message : "Failed to delete account");
       setDeleting(false);
     }
+  };
+
+  const handleSaveNotifs = async () => {
+    setSavingNotifs(true);
+    setSavedNotifs(false);
+    await fetch("/api/profile/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notifWeeklyDigest, notifAgentDown, notifBilling }),
+    });
+    setSavingNotifs(false);
+    setSavedNotifs(true);
+    setTimeout(() => setSavedNotifs(false), 3000);
   };
 
   const initial = name ? name[0]?.toUpperCase() : email?.[0]?.toUpperCase() || "?";
@@ -250,6 +292,64 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        {/* Notification Preferences */}
+        <div className="bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden animate-fade-up">
+          <div className="px-6 py-4 border-b border-[#e5e7eb]">
+            <h2 className="text-sm font-bold text-[#1a1a2e]">{t("profile", "notifPrefs")}</h2>
+            <p className="text-xs text-[#949aa0] mt-0.5">{t("profile", "notifNote")}</p>
+          </div>
+          <div className="divide-y divide-[#f6f9fa]">
+            {[
+              {
+                label: t("profile", "notifWeeklyDigest"),
+                desc: t("profile", "notifWeeklyDigestDesc"),
+                value: notifWeeklyDigest,
+                onChange: setNotifWeeklyDigest,
+              },
+              {
+                label: t("profile", "notifAgentDown"),
+                desc: t("profile", "notifAgentDownDesc"),
+                value: notifAgentDown,
+                onChange: setNotifAgentDown,
+              },
+              {
+                label: t("profile", "notifBilling"),
+                desc: t("profile", "notifBillingDesc"),
+                value: notifBilling,
+                onChange: setNotifBilling,
+              },
+            ].map((pref) => (
+              <div key={pref.label} className="flex items-center justify-between px-6 py-4">
+                <div>
+                  <p className="text-sm font-medium text-[#1a1a2e]">{pref.label}</p>
+                  <p className="text-xs text-[#949aa0] mt-0.5">{pref.desc}</p>
+                </div>
+                <button
+                  onClick={() => pref.onChange(!pref.value)}
+                  className={`relative w-11 h-6 rounded-full transition-all duration-300 focus:outline-none flex-shrink-0 ${
+                    pref.value ? "bg-[#de1b23]" : "bg-[#e5e7eb]"
+                  }`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${pref.value ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="px-6 py-4 border-t border-[#e5e7eb]">
+            <button
+              onClick={handleSaveNotifs}
+              disabled={savingNotifs}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                savedNotifs
+                  ? "bg-emerald-500 text-white"
+                  : "bg-[#de1b23] text-white hover:bg-[#c41820] hover:shadow-md hover:shadow-[#de1b23]/25"
+              } disabled:opacity-50`}
+            >
+              {savingNotifs ? "Saving..." : savedNotifs ? t("profile", "notifSaved") : t("profile", "save")}
+            </button>
+          </div>
+        </div>
+
         {/* Danger Zone */}
         <div className="bg-white rounded-2xl border border-red-200 overflow-hidden animate-fade-up">
           <div className="px-6 py-4 border-b border-red-100 bg-red-50/50">
@@ -258,7 +358,10 @@ export default function ProfilePage() {
           </div>
           <div className="px-6 py-5">
             <p className="text-sm text-[#949aa0] mb-4">
-              Deleting your account will permanently remove all your agents, channels, and data. This cannot be undone.
+              {agentCount != null && agentCount > 0
+                ? `This will permanently delete your ${agentCount} agent${agentCount !== 1 ? "s" : ""}, all connected channels, and all data. This cannot be undone.`
+                : "Deleting your account will permanently remove all your agents, channels, and data. This cannot be undone."
+              }
             </p>
             <div className="space-y-3">
               <div>

@@ -1513,6 +1513,103 @@ function CapabilitiesSection() {
   );
 }
 
+// Use Cases Section
+function UseCasesSection() {
+  const { isRTL } = useLanguage();
+
+  const cases = [
+    {
+      icon: (
+        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      ),
+      title: isRTL ? "دعم العملاء" : "Customer Support",
+      desc: isRTL
+        ? "رد على الأسئلة الشائعة وحل المشاكل وإعادة توجيه التذاكر — على مدار الساعة بدون انتظار."
+        : "Answer FAQs, resolve issues, and escalate tickets — 24/7 with zero wait time.",
+      tags: isRTL ? ["واتساب", "تيليجرام", "عربي+إنجليزي"] : ["WhatsApp", "Telegram", "Arabic + English"],
+      color: "#de1b23",
+    },
+    {
+      icon: (
+        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      ),
+      title: isRTL ? "توليد العملاء المحتملين" : "Lead Generation",
+      desc: isRTL
+        ? "أهّل الزوار، اجمع التفاصيل، وأضِف العملاء تلقائياً إلى CRM — كل ذلك عبر الرسائل."
+        : "Qualify visitors, collect details, and auto-add leads to your CRM — all via chat.",
+      tags: isRTL ? ["ديسكورد", "سلاك", "إشعارات"] : ["Discord", "Slack", "Notifications"],
+      color: "#5865f2",
+    },
+    {
+      icon: (
+        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      title: isRTL ? "بوت مجتمع" : "Community Bot",
+      desc: isRTL
+        ? "أدِر سيرفرات ديسكورد ومجموعات تيليجرام — اعتدل، أجب على الأسئلة، وابقِ المجتمع نشطاً."
+        : "Manage Discord servers and Telegram groups — moderate, answer questions, keep the community alive.",
+      tags: isRTL ? ["ديسكورد", "تيليجرام", "إشراف تلقائي"] : ["Discord", "Telegram", "Auto-moderation"],
+      color: "#25d366",
+    },
+  ];
+
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-14">
+          <span className="inline-block text-[11px] font-semibold tracking-[0.15em] text-[#de1b23]/70 uppercase font-mono mb-3">
+            {isRTL ? "حالات الاستخدام" : "Use Cases"}
+          </span>
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1a1a2e]">
+            {isRTL ? "ما الذي يمكنك بناؤه؟" : "What can you "}
+            <span className="text-[#de1b23]">{isRTL ? "" : "build?"}</span>
+          </h2>
+          <p className="text-sm text-[#949aa0] mt-3 max-w-lg mx-auto">
+            {isRTL
+              ? "من دعم العملاء إلى إدارة المجتمع — مساعد واحد يتكيف مع حالة الاستخدام."
+              : "From customer support to community management — one agent adapts to your use case."}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {cases.map((c, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl border border-[#e5e7eb] p-6 hover:shadow-lg hover:border-[#de1b23]/20 hover:-translate-y-1 transition-all duration-300 group"
+            >
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+                style={{ backgroundColor: `${c.color}15`, color: c.color }}
+              >
+                {c.icon}
+              </div>
+              <h3 className="text-base font-bold text-[#1a1a2e] mb-2">{c.title}</h3>
+              <p className="text-sm text-[#949aa0] leading-relaxed mb-4">{c.desc}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {c.tags.map((tag, ti) => (
+                  <span
+                    key={ti}
+                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full border"
+                    style={{ backgroundColor: `${c.color}10`, color: c.color, borderColor: `${c.color}25` }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // FAQ Section
 function FAQSection() {
   const { t, isRTL } = useLanguage();
@@ -1651,6 +1748,8 @@ function Footer() {
           <span>&middot;</span>
           <a href="/pricing" className="hover:text-[#de1b23] transition-colors">Pricing</a>
           <span>&middot;</span>
+          <a href="/status" className="hover:text-[#de1b23] transition-colors">Status</a>
+          <span>&middot;</span>
           <span>{t("footer", "copyright")}</span>
         </div>
       </div>
@@ -1671,6 +1770,8 @@ export default function Home() {
       <hr className="border-t border-gray-200/60 mx-6" />
       <FeaturesSection />
       <CapabilitiesSection />
+      <hr className="border-t border-gray-200/60 mx-6" />
+      <UseCasesSection />
       <hr className="border-t border-gray-200/60 mx-6" />
       <FAQSection />
       <hr className="border-t border-gray-200/60 mx-6" />

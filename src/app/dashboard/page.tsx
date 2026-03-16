@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useDashboardUser } from "./DashboardShell";
 import { BootUpCard } from "@/components/dashboard/BootUpCard";
+import { WelcomeOnboarding } from "@/components/dashboard/WelcomeOnboarding";
 
 interface Agent {
   id: string;
@@ -100,6 +101,7 @@ export default function DashboardPage() {
   const plan = billing?.plan ?? "none";
   const planLimit = PLAN_LIMITS[plan] ?? 1;
   const runningCount = agents.filter(a => a.status === "running").length;
+  const hasConnectedChannel = Object.values(channels).flat().length > 0;
 
   if (!loaded) {
     return (
@@ -124,6 +126,7 @@ export default function DashboardPage() {
           </h1>
           <p className="text-[#949aa0] mt-1">{t("dashboard", "setupFirstSubtitle")}</p>
         </div>
+        <WelcomeOnboarding hasCreatedAgent={false} hasConnectedChannel={false} />
         <BootUpCard hasAgents={false} />
       </div>
     );
@@ -141,6 +144,9 @@ export default function DashboardPage() {
         </h1>
         <p className="text-[#949aa0] mt-1 text-sm">{t("dashboard", "welcomeSubtitle")}</p>
       </div>
+
+      {/* Onboarding checklist */}
+      <WelcomeOnboarding hasCreatedAgent={hasAgents} hasConnectedChannel={hasConnectedChannel} />
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-up animate-delay-100">

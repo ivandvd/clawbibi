@@ -1,95 +1,191 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 
-export function WelcomeOnboarding() {
+const STORAGE_KEY = "clawbibi_onboarding_v1";
+
+interface OnboardingState {
+  dismissed: boolean;
+  msgSent: boolean;
+}
+
+interface Props {
+  hasCreatedAgent: boolean;
+  hasConnectedChannel: boolean;
+}
+
+export function WelcomeOnboarding({ hasCreatedAgent, hasConnectedChannel }: Props) {
   const { t, isRTL } = useLanguage();
+  const [loaded, setLoaded] = useState(false);
+  const [msgSent, setMsgSent] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const state: OnboardingState = JSON.parse(raw);
+        setDismissed(state.dismissed ?? false);
+        setMsgSent(state.msgSent ?? false);
+      }
+    } catch { /* ignore */ }
+    setLoaded(true);
+  }, []);
+
+  function markMsgSent() {
+    setMsgSent(true);
+    persist({ dismissed, msgSent: true });
+  }
+
+  function dismiss() {
+    setDismissed(true);
+    persist({ dismissed: true, msgSent });
+  }
+
+  function persist(state: OnboardingState) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch { /* ignore */ }
+  }
+
+  if (!loaded || dismissed) return null;
 
   const steps = [
     {
-      num: "1",
-      titleKey: "onboardStep1" as const,
-      descKey: "onboardStep1Desc" as const,
-      icon: (
-        <svg className="w-5 h-5 text-[#de1b23]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
+      done: hasCreatedAgent,
+      title: t("dashboard", "onboardStep1"),
+      desc: t("dashboard", "onboardStep1Desc"),
+      action: (
+        <Link
+          href="/dashboard/agents/new"
+          className="text-xs font-semibold text-[#de1b23] hover:underline"
+        >
+          {isRTL ? "أنشئ الآن ←" : "Create now →"}
+        </Link>
       ),
     },
     {
-      num: "2",
-      titleKey: "onboardStep2" as const,
-      descKey: "onboardStep2Desc" as const,
-      icon: (
-        <svg className="w-5 h-5 text-[#de1b23]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
+      done: hasConnectedChannel,
+      title: t("dashboard", "onboardStep3"),
+      desc: t("dashboard", "onboardStep3Desc"),
+      action: hasCreatedAgent ? (
+        <Link
+          href="/dashboard/agents"
+          className="text-xs font-semibold text-[#de1b23] hover:underline"
+        >
+          {isRTL ? "اذهب للمساعدين ←" : "Go to Agents →"}
+        </Link>
+      ) : null,
     },
     {
-      num: "3",
-      titleKey: "onboardStep3" as const,
-      descKey: "onboardStep3Desc" as const,
-      icon: (
-        <svg className="w-5 h-5 text-[#de1b23]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      ),
+      done: msgSent,
+      title: t("dashboard", "onboardStepMsg"),
+      desc: t("dashboard", "onboardStepMsgDesc"),
+      action: !msgSent ? (
+        <button
+          onClick={markMsgSent}
+          className="text-xs font-semibold text-[#de1b23] hover:underline"
+        >
+          {isRTL ? "تم الإرسال ✓" : "Mark as done ✓"}
+        </button>
+      ) : null,
     },
   ];
 
+  const completedCount = steps.filter(s => s.done).length;
+  const allDone = completedCount === steps.length;
+  const progressPct = Math.round((completedCount / steps.length) * 100);
+
   return (
-    <div className="animate-fade-up">
-      {/* Welcome card */}
-      <div className="relative overflow-hidden bg-white rounded-2xl border border-[#e5e7eb] p-6 sm:p-8 mb-6">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#de1b23] to-[#de1b23]/40" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-xl bg-[#de1b23]/10 flex items-center justify-center">
-              <img src="/clawbibi-logo.png" alt="" className="w-6 h-6" />
+    <div className="relative bg-white rounded-2xl border border-[#e5e7eb] overflow-hidden mb-6 animate-fade-up">
+      {/* Top progress bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-[#f6f9fa]">
+        <div
+          className="h-full bg-gradient-to-r from-[#de1b23] to-[#de1b23]/60 transition-all duration-700"
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+
+      <div className="px-6 pt-7 pb-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#de1b23]/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#de1b23]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#1a1a2e]">{t("dashboard", "onboardTitle")}</h2>
-              <p className="text-sm text-[#949aa0]">{t("dashboard", "onboardSubtitle")}</p>
+              <h2 className="text-base font-bold text-[#1a1a2e]">{t("dashboard", "onboardTitle")}</h2>
+              <p className="text-xs text-[#949aa0]">
+                {completedCount}/{steps.length} {isRTL ? "مكتملة" : "completed"}
+              </p>
             </div>
           </div>
+          {allDone && (
+            <button
+              onClick={dismiss}
+              className="text-xs text-[#949aa0] hover:text-[#1a1a2e] transition-colors flex-shrink-0"
+            >
+              {isRTL ? "إخفاء" : "Dismiss"}
+            </button>
+          )}
         </div>
-      </div>
 
-      {/* 3-step guide */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {steps.map((step, i) => (
-          <div
-            key={step.num}
-            className="relative bg-white rounded-2xl border border-[#e5e7eb] p-5 hover:shadow-md hover:border-[#de1b23]/15 transition-all duration-300 animate-fade-up"
-            style={{ animationDelay: `${(i + 1) * 100}ms` }}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="w-7 h-7 rounded-full bg-[#de1b23] text-white text-xs flex items-center justify-center font-bold shadow-sm shadow-[#de1b23]/25">
-                {step.num}
-              </span>
-              <div className="w-9 h-9 rounded-lg bg-[#de1b23]/10 flex items-center justify-center">
-                {step.icon}
+        {/* Steps */}
+        <div className="space-y-3">
+          {steps.map((step, i) => (
+            <div
+              key={i}
+              className={`flex items-start gap-4 p-4 rounded-xl border transition-all duration-300 ${
+                step.done
+                  ? "bg-emerald-50 border-emerald-100"
+                  : "bg-[#fafafa] border-[#e5e7eb]"
+              }`}
+            >
+              {/* Check circle */}
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-300 ${
+                step.done ? "bg-emerald-500" : "bg-[#e5e7eb]"
+              }`}>
+                {step.done ? (
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className="text-[10px] font-bold text-[#949aa0]">{i + 1}</span>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold ${step.done ? "text-emerald-700 line-through" : "text-[#1a1a2e]"}`}>
+                  {step.title}
+                </p>
+                <p className="text-xs text-[#949aa0] mt-0.5">{step.desc}</p>
+                {!step.done && step.action && (
+                  <div className="mt-2">{step.action}</div>
+                )}
               </div>
             </div>
-            <h3 className="text-sm font-bold text-[#1a1a2e] mb-1">{t("dashboard", step.titleKey)}</h3>
-            <p className="text-xs text-[#949aa0] leading-relaxed">{t("dashboard", step.descKey)}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* CTA */}
-      <div className="flex justify-center">
-        <Link
-          href="/dashboard/agents/new"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#de1b23] text-white hover:bg-[#c41820] hover:shadow-lg hover:shadow-[#de1b23]/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 text-sm font-semibold"
-        >
-          {t("agents", "createFirst")}
-          <svg className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-        </Link>
+        {/* All done message */}
+        {allDone && (
+          <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
+            <span className="text-xl">🎉</span>
+            <div>
+              <p className="text-sm font-bold text-emerald-800">
+                {isRTL ? "أحسنت! مساعدك جاهز تماماً." : "All set! Your agent is fully configured."}
+              </p>
+              <p className="text-xs text-emerald-600 mt-0.5">
+                {isRTL ? "يمكنك إخفاء هذا الدليل الآن." : "You can dismiss this guide now."}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

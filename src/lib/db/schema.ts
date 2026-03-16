@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(), // references auth.users.id
@@ -13,6 +13,9 @@ export const profiles = pgTable("profiles", {
   paddleCustomerId: text("paddle_customer_id"),
   paddleSubscriptionId: text("paddle_subscription_id"),
   planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
+  notifWeeklyDigest: boolean("notif_weekly_digest").default(true),
+  notifAgentDown: boolean("notif_agent_down").default(true),
+  notifBilling: boolean("notif_billing").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
