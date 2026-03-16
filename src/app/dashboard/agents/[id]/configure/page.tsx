@@ -6,9 +6,9 @@ import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 // ── Types ────────────────────────────────────────────────────────────────────
-type Tab = "identity" | "model" | "skills" | "settings";
+type Tab = "identity" | "model" | "skills" | "memory" | "heartbeat" | "settings";
 
-interface ApiKeys { anthropic: string; openai: string; google: string }
+interface ApiKeys { anthropic: string; openai: string; google: string; groq: string }
 
 interface CustomTool {
   id: string;
@@ -29,12 +29,14 @@ const MODEL_KEY_MAP: Record<string, keyof ApiKeys> = {
   "claude-opus": "anthropic",
   "gpt-4o":      "openai",
   "gemini-2.5":  "google",
+  "llama-3.3":   "groq",
 };
 
 const API_KEY_META: Record<keyof ApiKeys, { label: string; placeholder: string; docsUrl: string }> = {
   anthropic: { label: "Anthropic API Key",  placeholder: "sk-ant-...", docsUrl: "https://console.anthropic.com/" },
   openai:    { label: "OpenAI API Key",     placeholder: "sk-...",     docsUrl: "https://platform.openai.com/api-keys" },
   google:    { label: "Google AI API Key",  placeholder: "AIza...",    docsUrl: "https://aistudio.google.com/" },
+  groq:      { label: "Groq API Key",       placeholder: "gsk_...",    docsUrl: "https://console.groq.com/" },
 };
 
 const AVAILABLE_MODELS = [
@@ -42,6 +44,7 @@ const AVAILABLE_MODELS = [
   { id: "claude-opus", name: "Claude Opus 4",      badge: "Most intelligent", badgeColor: "text-purple-600 bg-purple-50" },
   { id: "gpt-4o",      name: "GPT-4o",             badge: "Multimodal",      badgeColor: "text-emerald-600 bg-emerald-50" },
   { id: "gemini-2.5",  name: "Gemini 2.5 Pro",     badge: "Fast & cheap",    badgeColor: "text-blue-600 bg-blue-50" },
+  { id: "llama-3.3",   name: "Llama 3.3 70B",      badge: "Free via Groq",   badgeColor: "text-emerald-700 bg-emerald-50" },
 ];
 
 const BUILTIN_SKILLS = [
@@ -72,9 +75,12 @@ export default function ConfigurePage() {
   const [saveError, setSaveError]       = useState<string | null>(null);
 
   const [soulMd, setSoulMd]             = useState("");
+  const [memoryMd, setMemoryMd]         = useState("");
+  const [heartbeatMd, setHeartbeatMd]   = useState("");
+  const [braveApiKey, setBraveApiKey]   = useState("");
 
   const [model, setModel]               = useState("claude-4.5");
-  const [apiKeys, setApiKeys]           = useState<ApiKeys>({ anthropic: "", openai: "", google: "" });
+  const [apiKeys, setApiKeys]           = useState<ApiKeys>({ anthropic: "", openai: "", google: "", groq: "" });
   const [showKey, setShowKey]           = useState(false);
 
   const [skills, setSkills]             = useState<SkillsConfig>({ builtin: {}, custom: [] });
@@ -101,8 +107,13 @@ export default function ConfigurePage() {
       if (d.context_size) setContextSize(d.context_size);
       if (d.max_tokens)   setMaxTokens(d.max_tokens);
       if (d.soul_md)      setSoulMd(d.soul_md);
+      if (d.memory_md)    setMemoryMd(d.memory_md);
+      if (d.heartbeat_md) setHeartbeatMd(d.heartbeat_md);
       if (d.status)       setAgentStatus(d.status);
-      if (d.api_keys)     setApiKeys({ anthropic: d.api_keys.anthropic ?? "", openai: d.api_keys.openai ?? "", google: d.api_keys.google ?? "" });
+      if (d.api_keys) {
+        setApiKeys({ anthropic: d.api_keys.anthropic ?? "", openai: d.api_keys.openai ?? "", google: d.api_keys.google ?? "", groq: d.api_keys.groq ?? "" });
+        if (d.api_keys.brave) setBraveApiKey(d.api_keys.brave);
+      }
       if (d.skills)       setSkills({ builtin: d.skills.builtin ?? {}, custom: d.skills.custom ?? [] });
     }
     load();
@@ -115,7 +126,12 @@ export default function ConfigurePage() {
       const res = await fetch(`/api/agents/${agentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, context_size: contextSize, max_tokens: maxTokens, soul_md: soulMd, api_keys: apiKeys, skills }),
+        body: JSON.stringify({
+          model, context_size: contextSize, max_tokens: maxTokens,
+          soul_md: soulMd, memory_md: memoryMd, heartbeat_md: heartbeatMd,
+          api_keys: { ...apiKeys, ...(braveApiKey.trim() ? { brave: braveApiKey.trim() } : {}) },
+          skills,
+        }),
       });
       if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
       else setSaveError("Save failed — please try again.");
@@ -143,10 +159,12 @@ export default function ConfigurePage() {
   const keyMeta     = API_KEY_META[requiredKey];
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "identity", label: "Identity" },
-    { id: "model",    label: "Model"    },
-    { id: "skills",   label: "Skills"   },
-    { id: "settings", label: "Settings" },
+    { id: "identity",  label: "Identity"  },
+    { id: "model",     label: "Model"     },
+    { id: "skills",    label: "Skills"    },
+    { id: "memory",    label: "Memory"    },
+    { id: "heartbeat", label: "Heartbeat" },
+    { id: "settings",  label: "Settings"  },
   ];
 
   return (
@@ -327,6 +345,20 @@ export default function ConfigurePage() {
                   );
                 })}
               </div>
+
+            {/* Brave API key — shown when web-search is enabled */}
+            {skills.builtin["web-search"] && (
+              <div className="mt-4 p-4 rounded-xl bg-[#f6f9fa] border border-[#e5e7eb]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-[#4a4a5a]">Brave Search API Key</label>
+                  <a href="https://api.search.brave.com/" target="_blank" rel="noopener noreferrer" className="text-xs text-[#de1b23] hover:underline">Get free key ↗</a>
+                </div>
+                <input type="password" value={braveApiKey} onChange={e => setBraveApiKey(e.target.value)}
+                  placeholder="BSA..." dir="ltr"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#e5e7eb] text-sm focus:outline-none focus:border-[#de1b23] focus:ring-1 focus:ring-[#de1b23]/20 font-mono" />
+                <p className="mt-1.5 text-xs text-[#949aa0]">Required for live web search. Free tier: ~1,000 queries/month.</p>
+              </div>
+            )}
             </div>
 
             {/* Custom tools */}
@@ -412,6 +444,56 @@ export default function ConfigurePage() {
               )}
             </div>
           </>
+        )}
+
+        {/* ── Memory ────────────────────────────────────────────────────────── */}
+        {activeTab === "memory" && (
+          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6 hover:shadow-md hover:border-[#de1b23]/10 transition-all duration-500 animate-fade-up">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold text-[#1a1a2e]">MEMORY.md — Persistent Memory</h3>
+                <p className="text-xs text-[#949aa0] mt-1">
+                  Loaded into your agent&apos;s system prompt on every startup. Write facts about users, preferences, or context your agent should always remember across conversations.
+                </p>
+              </div>
+              <span className="text-xs text-[#949aa0] bg-[#f6f9fa] px-2 py-1 rounded-lg flex-shrink-0">Markdown</span>
+            </div>
+            <textarea
+              value={memoryMd}
+              onChange={(e) => setMemoryMd(e.target.value)}
+              placeholder={"## User Preferences\n- Prefers Arabic responses\n- Located in Riyadh, Saudi Arabia\n\n## Important Context\n- Business is a restaurant chain\n- Peak hours: 12pm–3pm and 7pm–11pm\n\n## Remembered Facts\n- ..."}
+              rows={12}
+              className="w-full px-4 py-3 rounded-xl border border-[#e5e7eb] text-sm focus:outline-none focus:border-[#de1b23] focus:ring-1 focus:ring-[#de1b23]/20 font-mono resize-y text-[#1a1a2e] placeholder:text-[#c5c9cd] leading-relaxed"
+              dir="ltr"
+            />
+            <p className="mt-2 text-xs text-[#949aa0]">{memoryMd.length} characters — saved to ~/.openclaw/MEMORY.md</p>
+          </div>
+        )}
+
+        {/* ── Heartbeat ──────────────────────────────────────────────────────── */}
+        {activeTab === "heartbeat" && (
+          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6 hover:shadow-md hover:border-[#de1b23]/10 transition-all duration-500 animate-fade-up">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold text-[#1a1a2e]">HEARTBEAT.md — Scheduled Messages</h3>
+                <p className="text-xs text-[#949aa0] mt-1">
+                  Your agent checks this schedule every minute and sends proactive AI-generated messages to connected users at the defined times.
+                </p>
+              </div>
+              <span className="text-xs text-[#949aa0] bg-[#f6f9fa] px-2 py-1 rounded-lg flex-shrink-0">UTC</span>
+            </div>
+            <textarea
+              value={heartbeatMd}
+              onChange={(e) => setHeartbeatMd(e.target.value)}
+              placeholder={"# Heartbeat Schedule\n\n## Morning Greeting\nschedule: \"09:00\"\nmessage: \"Send a motivational good morning message in the user's language.\"\n\n## Evening Check-in\nschedule: \"18:00\"\nmessage: \"Send a friendly evening check-in to all connected users.\"\n\n## Weekly Summary\nschedule: \"10:00\"\nmessage: \"It's Monday — send a brief weekly goals reminder.\""}
+              rows={14}
+              className="w-full px-4 py-3 rounded-xl border border-[#e5e7eb] text-sm focus:outline-none focus:border-[#de1b23] focus:ring-1 focus:ring-[#de1b23]/20 font-mono resize-y text-[#1a1a2e] placeholder:text-[#c5c9cd] leading-relaxed"
+              dir="ltr"
+            />
+            <p className="mt-2 text-xs text-[#949aa0]">
+              Schedule format: <code className="bg-[#f6f9fa] px-1 rounded">HH:MM</code> in 24h UTC. Saving restarts the agent to apply the new schedule.
+            </p>
+          </div>
         )}
 
         {/* ── Settings ──────────────────────────────────────────────────────── */}

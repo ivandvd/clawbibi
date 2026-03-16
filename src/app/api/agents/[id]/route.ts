@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { pushApiKeys, pushSoulMd, pushModelConfig, pushSkillsConfig } from "@/lib/ssh";
+import { pushApiKeys, pushSoulMd, pushModelConfig, pushSkillsConfig, pushMemoryMd, pushHeartbeatMd } from "@/lib/ssh";
 import { deprovisionAgent } from "@/lib/provision";
 
 // GET /api/agents/[id] — get agent details
@@ -46,15 +46,17 @@ export async function PATCH(
   const body = await request.json();
 
   // Separate SSH-synced fields from plain DB fields
-  const { api_keys, soul_md, skills, ...dbFields } = body;
+  const { api_keys, soul_md, skills, memory_md, heartbeat_md, ...dbFields } = body;
 
   const { data: agent, error } = await supabase
     .from("agents")
     .update({
       ...dbFields,
-      ...(api_keys !== undefined ? { api_keys } : {}),
-      ...(soul_md  !== undefined ? { soul_md }  : {}),
-      ...(skills   !== undefined ? { skills }   : {}),
+      ...(api_keys    !== undefined ? { api_keys }    : {}),
+      ...(soul_md     !== undefined ? { soul_md }     : {}),
+      ...(skills      !== undefined ? { skills }      : {}),
+      ...(memory_md   !== undefined ? { memory_md }   : {}),
+      ...(heartbeat_md !== undefined ? { heartbeat_md } : {}),
     })
     .eq("id", id)
     .eq("user_id", user.id)
@@ -74,6 +76,8 @@ export async function PATCH(
       if (api_keys.anthropic) keyMap.ANTHROPIC_API_KEY = api_keys.anthropic;
       if (api_keys.openai)    keyMap.OPENAI_API_KEY    = api_keys.openai;
       if (api_keys.google)    keyMap.GOOGLE_AI_API_KEY = api_keys.google;
+      if (api_keys.groq)      keyMap.GROQ_API_KEY      = api_keys.groq;
+      if (api_keys.brave)     keyMap.BRAVE_API_KEY     = api_keys.brave;
       if (Object.keys(keyMap).length > 0) {
         pushApiKeys(agent.ip, keyMap).catch((err) =>
           console.error(`[ssh] API keys push failed for agent ${id}:`, err)
@@ -99,6 +103,20 @@ export async function PATCH(
     if (skills !== undefined) {
       pushSkillsConfig(agent.ip, skills).catch((err) =>
         console.error(`[ssh] Skills push failed for agent ${id}:`, err)
+      );
+    }
+
+    // Push MEMORY.md → ~/.openclaw/MEMORY.md
+    if (memory_md !== undefined) {
+      pushMemoryMd(agent.ip, memory_md).catch((err) =>
+        console.error(`[ssh] MEMORY.md push failed for agent ${id}:`, err)
+      );
+    }
+
+    // Push HEARTBEAT.md → ~/.openclaw/HEARTBEAT.md (+ restart)
+    if (heartbeat_md !== undefined) {
+      pushHeartbeatMd(agent.ip, heartbeat_md).catch((err) =>
+        console.error(`[ssh] HEARTBEAT.md push failed for agent ${id}:`, err)
       );
     }
   }
