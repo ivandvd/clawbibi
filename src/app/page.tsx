@@ -132,6 +132,15 @@ function Header() {
 function HeroSection() {
   const { t } = useLanguage();
   const fullText = "CLAWBIBI";
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient().auth.getSession().then(({ data: { session } }) => {
+        setIsLoggedIn(!!session);
+      });
+    });
+  }, []);
   const [displayed, setDisplayed] = useState("");
   const [showCursor, setShowCursor] = useState(true);
 
@@ -176,7 +185,7 @@ function HeroSection() {
           {t("hero", "subtitle")}
         </p>
 
-        <Link href="/login" className="inline-flex items-center gap-2 bg-[#de1b23] text-white px-10 py-4 rounded-full font-semibold uppercase text-sm tracking-wider shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30 hover:-translate-y-0.5 hover:bg-[#c41820] transition-all duration-300 ease-out">
+        <Link href={isLoggedIn ? "/dashboard/agents/new" : "/login"} className="inline-flex items-center gap-2 bg-[#de1b23] text-white px-10 py-4 rounded-full font-semibold uppercase text-sm tracking-wider shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30 hover:-translate-y-0.5 hover:bg-[#c41820] transition-all duration-300 ease-out">
           {t("hero", "cta")}
         </Link>
 
@@ -1675,6 +1684,16 @@ function FAQSection() {
 // Final CTA
 function CTASection() {
   const { t } = useLanguage();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient().auth.getSession().then(({ data: { session } }) => {
+        setIsLoggedIn(!!session);
+      });
+    });
+  }, []);
+
   return (
     <section className="py-16 px-6">
       <div className="max-w-4xl mx-auto relative rounded-3xl bg-[#f6f9fa] border border-gray-100 py-20 px-8">
@@ -1692,7 +1711,7 @@ function CTASection() {
             {t("cta", "subtitle")}
           </p>
           <div className="pt-2">
-            <Link href="/login" className="inline-flex items-center gap-2 bg-[#de1b23] text-white font-semibold px-10 py-4 rounded-full uppercase text-sm tracking-wider hover:bg-[#c41820] transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30">
+            <Link href={isLoggedIn ? "/dashboard/agents/new" : "/login"} className="inline-flex items-center gap-2 bg-[#de1b23] text-white font-semibold px-10 py-4 rounded-full uppercase text-sm tracking-wider hover:bg-[#c41820] transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-[#de1b23]/20 hover:shadow-xl hover:shadow-[#de1b23]/30">
               {t("cta", "button")}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </Link>
