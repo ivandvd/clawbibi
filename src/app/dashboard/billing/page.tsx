@@ -434,7 +434,7 @@ function BillingPageInner() {
                   </ul>
 
                   <a
-                    href="mailto:hello@clawbibi.ai"
+                    href="mailto:clawbibi.ai@gmail.com"
                     className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 bg-[#de1b23] text-white hover:bg-[#c41820] hover:shadow-lg hover:shadow-[#de1b23]/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300"
                   >
                     {t("billing", "bookMeeting")}
