@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { name, model, api_key } = body;
+  const { name, model, api_key, telegram_token } = body;
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -111,6 +111,17 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Save Telegram token as a pending channel — auto-pushed when agent becomes ready
+  if (telegram_token?.trim()) {
+    await supabase.from("agent_channels").insert({
+      id: nanoid(8),
+      agent_id: id,
+      platform: "telegram",
+      status: "pending",
+      config: { token: telegram_token.trim() },
+    });
   }
 
   // Trigger server provisioning in the background (non-blocking)

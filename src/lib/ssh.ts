@@ -103,7 +103,7 @@ function buildChannelConfig(platform: string, config: Record<string, string>): R
       return {
         enabled: true,
         botToken: config.token,
-        dmPolicy: "pairing",
+        dmPolicy: "open",
       };
 
     case "discord":

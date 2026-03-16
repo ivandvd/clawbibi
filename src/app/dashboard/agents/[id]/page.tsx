@@ -615,13 +615,45 @@ export default function GatewayPage() {
         </div>
       )}
 
-      {/* Creating state banner */}
+      {/* Creating state — progress stepper */}
       {isCreating && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Agent is setting up...</p>
-            <p className="text-xs text-amber-600 mt-0.5">Your server is being provisioned. This usually takes 2–3 minutes.</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <p className="text-sm font-semibold text-amber-800">Setting up your agent — usually 2–3 min</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Step 1: Server requested */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {agent?.status === "creating" ? (
+                <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+              )}
+              <span className={`text-xs font-semibold ${agent?.status !== "creating" ? "text-emerald-700" : "text-amber-700"}`}>
+                Server requested
+              </span>
+            </div>
+            <div className={`flex-1 h-px ${agent?.status !== "creating" ? "bg-emerald-300" : "bg-amber-200"}`} />
+            {/* Step 2: Server booting */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {["provisioning", "starting"].includes(agent?.status ?? "") ? (
+                <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div className="w-5 h-5 rounded-full border-2 border-amber-200 bg-amber-50" />
+              )}
+              <span className={`text-xs font-semibold ${["provisioning", "starting"].includes(agent?.status ?? "") ? "text-amber-700" : "text-amber-400"}`}>
+                Server booting
+              </span>
+            </div>
+            <div className="flex-1 h-px bg-amber-200" />
+            {/* Step 3: Runtime ready */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="w-5 h-5 rounded-full border-2 border-amber-200 bg-amber-50" />
+              <span className="text-xs font-semibold text-amber-400">Runtime ready</span>
+            </div>
           </div>
         </div>
       )}
