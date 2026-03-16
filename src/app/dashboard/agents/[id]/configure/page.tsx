@@ -55,17 +55,31 @@ const AVAILABLE_MODELS = [
 ];
 
 const BUILTIN_SKILLS = [
-  { id: "web-search",       name: "Web Search",        desc: "Search the internet for current information",           icon: "🔍" },
-  { id: "calculator",       name: "Calculator",         desc: "Evaluate math expressions instantly",                   icon: "🔢" },
-  { id: "weather",          name: "Weather",            desc: "Get live weather forecasts for any city",               icon: "🌤" },
-  { id: "prayer-times",     name: "Prayer Times",       desc: "Real-time salah times for any city via aladhan.com",    icon: "🕌" },
-  { id: "currency",         name: "Currency Exchange",  desc: "Live exchange rates — e.g. 100 USD to SAR",             icon: "💱" },
-  { id: "quran",            name: "Quran Lookup",       desc: "Fetch any ayah by reference — e.g. 2:255",              icon: "📖" },
-  { id: "summariser",       name: "Summariser",         desc: "Summarise long documents, URLs, and YouTube videos",    icon: "📄", comingSoon: true },
-  { id: "translator",       name: "Translator",         desc: "Translate between Arabic, English, and 50+ languages",  icon: "🌐", comingSoon: true },
-  { id: "code-interpreter", name: "Code Interpreter",  desc: "Write and execute Python/JS code to solve problems",    icon: "💻", comingSoon: true },
-  { id: "image-gen",        name: "Image Generation",  desc: "Generate images from text prompts (DALL-E / SD)",       icon: "🎨", comingSoon: true },
-  { id: "reminder",         name: "Reminders",          desc: "Set reminders and scheduled messages",                  icon: "⏰", comingSoon: true },
+  // ── Executive Assistant Pack ───────────────────────────────────────────────
+  { id: "email-drafting",       name: "Email Drafting",     desc: "Craft professional emails, replies, and follow-ups in your voice",     icon: "✉️" },
+  { id: "humanizer",            name: "Humanizer",          desc: "Rewrite AI-generated text to sound natural and authentically human",   icon: "🧑" },
+  { id: "meeting-prep",         name: "Meeting Prep",       desc: "Research attendees and generate pre-meeting briefings automatically",  icon: "📋", comingSoon: true },
+  { id: "executive-digest",     name: "Executive Digest",   desc: "Morning briefing: stalled threads, overdue tasks, calendar conflicts", icon: "📊", comingSoon: true },
+  { id: "action-items-todoist", name: "Action Items",       desc: "Extract tasks from meeting notes and sync them to Todoist",            icon: "✅", comingSoon: true },
+  { id: "todoist-due-drafts",   name: "Task Follow-ups",    desc: "Auto-draft follow-up emails for tasks due today in Todoist",          icon: "📝", comingSoon: true },
+  // ── Knowledge & Data ──────────────────────────────────────────────────────
+  { id: "web-search",           name: "Web Search",         desc: "Search the internet for current information (requires Brave key)",    icon: "🔍" },
+  { id: "wikipedia",            name: "Wikipedia",          desc: "Look up any topic on Wikipedia instantly",                            icon: "📚" },
+  { id: "dictionary",           name: "Dictionary",         desc: "Word definitions, parts of speech, and usage examples",               icon: "📖" },
+  { id: "calculator",           name: "Calculator",         desc: "Evaluate math expressions instantly",                                 icon: "🔢" },
+  { id: "weather",              name: "Weather",            desc: "Get live weather forecasts for any city",                             icon: "🌤" },
+  { id: "prayer-times",         name: "Prayer Times",       desc: "Real-time salah times for any city via aladhan.com",                  icon: "🕌" },
+  { id: "currency",             name: "Currency Exchange",  desc: "Live exchange rates — e.g. 100 USD to SAR",                          icon: "💱" },
+  { id: "crypto",               name: "Crypto Prices",      desc: "Live BTC, ETH, SOL prices in USD & SAR via CoinGecko",               icon: "📈" },
+  { id: "quran",                name: "Quran Lookup",       desc: "Fetch any ayah by reference — e.g. 2:255",                           icon: "🕋" },
+  // ── Coming Soon ───────────────────────────────────────────────────────────
+  { id: "summariser",           name: "Summariser",         desc: "Summarise long documents, URLs, and YouTube videos",                  icon: "📄", comingSoon: true },
+  { id: "translator",           name: "Translator",         desc: "Translate between Arabic, English, and 50+ languages",               icon: "🌐", comingSoon: true },
+  { id: "news",                 name: "News Headlines",     desc: "Latest headlines by topic, country, or keyword",                     icon: "📰", comingSoon: true },
+  { id: "stocks",               name: "Stock Prices",       desc: "Real-time stock and index quotes",                                   icon: "📊", comingSoon: true },
+  { id: "code-interpreter",     name: "Code Interpreter",   desc: "Write and execute Python/JS code to solve problems",                 icon: "💻", comingSoon: true },
+  { id: "image-gen",            name: "Image Generation",   desc: "Generate images from text prompts (DALL-E / SD)",                   icon: "🎨", comingSoon: true },
+  { id: "reminder",             name: "Reminders",          desc: "Set reminders and scheduled messages",                               icon: "⏰", comingSoon: true },
 ] as const;
 
 function nanoid6() {

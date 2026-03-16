@@ -272,6 +272,52 @@ async function gatherSkillContext(cfg, text) {
       } catch {}
     }
   }
+  if (sk['email-drafting'] && /email|draft|reply|compose|follow.?up|\\u0628\\u0631\\u064a\\u062f|\\u0631\\u0633\\u0627\\u0644\\u0629|\\u0631\\u062f|\\u062a\\u0648\\u0627\\u0635\\u0644/i.test(text)) {
+    parts.push('## Email Drafting Mode\\nYou are acting as an executive assistant. Craft professional, clear, concise emails in the user voice. Include a subject line when appropriate. Match tone to context (formal / warm / casual). Avoid filler, get to the point.');
+  }
+  if (sk['humanizer'] && /humanize|human.?like|sound natural|rewrite|make it sound|don.?t sound like ai|\\u0637\\u0628\\u064a\\u0639\\u064a/i.test(text)) {
+    parts.push('## Humanizer Mode\\nRewrite the provided text to sound natural and authentically human. Remove corporate jargon, vary sentence length, use contractions where appropriate, and ensure it reads like a real person wrote it — not an AI.');
+  }
+  if (sk['wikipedia'] && /wiki|wikipedia|what is|who is|who was|explain|tell me about/i.test(text)) {
+    try {
+      const q = text.replace(/^(what|who|when|where|how|why|explain|tell me about|wikipedia)\\s+(is|was|are|were)?\\s*/i, '').trim().slice(0, 80);
+      if (q.length > 2) {
+        const raw = await httpGet('en.wikipedia.org', '/api/rest_v1/page/summary/' + encodeURIComponent(q), null);
+        const wp = JSON.parse(raw);
+        if (wp.extract && wp.extract.length > 30) {
+          parts.push('## Wikipedia: ' + (wp.title || q) + '\\n' + wp.extract.slice(0, 600));
+        }
+      }
+    } catch {}
+  }
+  if (sk['dictionary'] && /define|definition|meaning|what does.*mean/i.test(text)) {
+    try {
+      const wm = text.match(/(?:define|meaning of|what does)\\s+([a-zA-Z]+)/i);
+      if (wm) {
+        const word = wm[1].toLowerCase();
+        const raw = await httpGet('api.dictionaryapi.dev', '/api/v2/entries/en/' + word, null);
+        const defs = JSON.parse(raw);
+        if (Array.isArray(defs) && defs[0] && defs[0].meanings && defs[0].meanings[0]) {
+          const m = defs[0].meanings[0];
+          const d = m.definitions[0];
+          parts.push('## Dictionary: ' + word + '\\n' + m.partOfSpeech + ': ' + d.definition + (d.example ? '\\nExample: ' + d.example : ''));
+        }
+      }
+    } catch {}
+  }
+  if (sk['crypto'] && /bitcoin|btc|ethereum|eth|solana|sol|crypto|\\u0628\\u064a\\u062a\\u0643\\u0648\\u064a\\u0646/i.test(text)) {
+    try {
+      const coins = [];
+      if (/bitcoin|btc/i.test(text)) coins.push('bitcoin');
+      if (/ethereum|eth/i.test(text)) coins.push('ethereum');
+      if (/solana|sol/i.test(text)) coins.push('solana');
+      if (coins.length === 0) coins.push('bitcoin');
+      const raw = await httpGet('api.coingecko.com', '/api/v3/simple/price?ids=' + coins.join(',') + '&vs_currencies=usd,sar', null);
+      const prices = JSON.parse(raw);
+      const lines = Object.entries(prices).map(function(e) { return e[0] + ': $' + e[1].usd + ' USD / ' + e[1].sar + ' SAR'; });
+      if (lines.length) parts.push('## Crypto Prices\\n' + lines.join('\\n'));
+    } catch {}
+  }
   const custom = (cfg.skills && cfg.skills.custom) || [];
   for (let i = 0; i < custom.length; i++) {
     const tool = custom[i];
@@ -613,7 +659,14 @@ function buildCloudInit(agentId: string, model: string, apiKeys?: Record<string,
     model,
     gateway: { host: "0.0.0.0", port: 3000 },
     channels: {},
-    skills: {},
+    skills: {
+      "email-drafting": true,
+      "humanizer": true,
+      "calculator": true,
+      "prayer-times": true,
+      "currency": true,
+      "quran": true,
+    },
     allowed: {},
     ...(apiKeys ? { api_keys: apiKeys } : {}),
   }, null, 2);
