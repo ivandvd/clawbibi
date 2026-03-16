@@ -235,7 +235,8 @@ async function gatherSkillContext(cfg, text) {
       const cm = text.match(/(?:in|at|for|\\u0641\\u064a)\\s+([a-zA-Z][a-zA-Z\\s]{1,18})/i);
       const city = cm ? encodeURIComponent(cm[1].trim()) : 'Riyadh';
       const cityName = cm ? cm[1].trim() : 'Riyadh';
-      const raw = await httpGet('api.aladhan.com', '/v1/timingsByCity?city=' + city + '&country=SA&method=4', null);
+      const today = new Date().toISOString().split('T')[0].split('-').reverse().join('-');
+      const raw = await httpGet('api.aladhan.com', '/v1/timingsByCity/' + today + '?city=' + city + '&country=SA&method=4', null);
       const pr = JSON.parse(raw);
       if (pr.data && pr.data.timings) {
         const t = pr.data.timings;
@@ -250,9 +251,9 @@ async function gatherSkillContext(cfg, text) {
         const amount = parseFloat(ccm[1].replace(',', '.'));
         const from = ccm[2].toUpperCase();
         const to = ccm[3].toUpperCase();
-        const raw = await httpGet('api.frankfurter.app', '/latest?from=' + from + '&to=' + to, null);
+        const raw = await httpGet('open.er-api.com', '/v6/latest/' + from, null);
         const fx = JSON.parse(raw);
-        if (fx.rates && fx.rates[to]) {
+        if (fx.result === 'success' && fx.rates && fx.rates[to]) {
           const result = (amount * fx.rates[to]).toFixed(2);
           parts.push('## Currency\\n' + amount + ' ' + from + ' = ' + result + ' ' + to + ' (rate: ' + fx.rates[to] + ')');
         }
