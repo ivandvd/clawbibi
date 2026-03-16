@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     model: modelId,
     status: "creating",
     subdomain,
-    provider: "hetzner",
+    provider: "digitalocean",
     ...(api_key?.trim() ? { api_keys: apiKeys } : {}),
   };
 
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
   }
 
   // Trigger server provisioning in the background (non-blocking)
-  // Requires: HETZNER_API_KEY, CLOUDFLARE_API_KEY, CLOUDFLARE_ZONE_ID, SUPABASE_SERVICE_ROLE_KEY
+  // Requires: DO_API_KEY, CLOUDFLARE_API_KEY, CLOUDFLARE_ZONE_ID, SUPABASE_SERVICE_ROLE_KEY
   provisionAgent(id, modelId, subdomain, Object.keys(apiKeys).length ? apiKeys : undefined).catch((err) => {
     console.error(`Provisioning failed for agent ${id}:`, err);
   });

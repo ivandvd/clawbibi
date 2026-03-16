@@ -45,6 +45,14 @@ export default function MonitorPage() {
 
   useEffect(() => { fetchData(); }, [agentId]);
 
+  // Auto-refresh every 15s when online
+  useEffect(() => {
+    if (health?.status !== "running") return;
+    const interval = setInterval(() => fetchData(), 15000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [health?.status, agentId]);
+
   const refresh = () => { setRefreshing(true); fetchData(); };
 
   const isOnline = health?.status === "running";

@@ -83,6 +83,12 @@ export default function LogsPage() {
     fetchLogs();
   }, [fetchLogs]);
 
+  // Auto-refresh every 15s
+  useEffect(() => {
+    const interval = setInterval(() => fetchLogs(), 15000);
+    return () => clearInterval(interval);
+  }, [fetchLogs]);
+
   const platforms = ["all", ...Array.from(new Set(logs.map((l) => l.platform.toLowerCase())))];
 
   const filtered = logs.filter((entry) => {

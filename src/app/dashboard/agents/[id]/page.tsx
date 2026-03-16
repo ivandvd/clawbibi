@@ -403,12 +403,13 @@ export default function GatewayPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  // Auto-refresh every 30s when running/creating
+  // Auto-refresh: 10s while provisioning (fast feedback), 30s when running
   useEffect(() => {
     if (!agent) return;
-    const active = ["running", "creating", "provisioning", "starting"].includes(agent.status);
-    if (!active) return;
-    const interval = setInterval(() => reload(), 30000);
+    const isProvisioning = ["creating", "provisioning", "starting"].includes(agent.status);
+    const isRunning = agent.status === "running";
+    if (!isProvisioning && !isRunning) return;
+    const interval = setInterval(() => reload(), isProvisioning ? 10000 : 30000);
     return () => clearInterval(interval);
   }, [agent, reload]);
 
@@ -685,6 +686,10 @@ export default function GatewayPage() {
                       >
                         {disconnecting === p.id ? "..." : "Disconnect"}
                       </button>
+                    ) : ["discord", "slack", "signal"].includes(p.id) ? (
+                      <span className="px-3 py-1.5 rounded-lg text-xs bg-[#f6f9fa] text-[#c5c9cd] border border-[#e5e7eb]">
+                        Coming Soon
+                      </span>
                     ) : (
                       <button
                         onClick={() => setExpandedChannel(isExpanded ? null : p.id)}

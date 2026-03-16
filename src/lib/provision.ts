@@ -153,7 +153,7 @@ async function askAI(cfg, sessionKey, userText) {
   if (model.includes('claude')) {
     const key = keys.anthropic || process.env.ANTHROPIC_API_KEY;
     if (!key) throw new Error('No Anthropic API key configured');
-    const modelId = model.includes('opus') ? 'claude-opus-4-5-20251001' : 'claude-sonnet-4-5-20251001';
+    const modelId = model.includes('opus') ? 'claude-opus-4-6' : 'claude-sonnet-4-6';
     const res = await httpPost('api.anthropic.com', '/v1/messages', JSON.stringify({
       model: modelId, max_tokens: 1024, system: soul,
       messages: msgs.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
