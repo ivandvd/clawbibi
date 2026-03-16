@@ -89,6 +89,7 @@ export async function POST(request: Request) {
   if (api_key?.trim()) {
     if (modelId.startsWith("gpt")) apiKeys.openai = api_key.trim();
     else if (modelId.startsWith("gemini")) apiKeys.google = api_key.trim();
+    else if (modelId.startsWith("llama") || modelId.includes("groq")) apiKeys.groq = api_key.trim();
     else apiKeys.anthropic = api_key.trim();
   }
 

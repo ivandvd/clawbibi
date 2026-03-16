@@ -174,6 +174,15 @@ async function askAI(cfg, sessionKey, userText) {
       '/v1beta/models/gemini-2.0-flash:generateContent?key=' + key,
       JSON.stringify({ contents: [{ role: 'user', parts: [{ text: soul + '\\n\\n' + userText }] }] }), {});
     text = res.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  } else if (model.includes('llama') || model.includes('mixtral') || model.includes('groq')) {
+    const key = keys.groq || process.env.GROQ_API_KEY;
+    if (!key) throw new Error('No Groq API key configured');
+    const groqModel = model.includes('mixtral') ? 'mixtral-8x7b-32768' : 'llama-3.3-70b-versatile';
+    const res = await httpPost('api.groq.com', '/openai/v1/chat/completions', JSON.stringify({
+      model: groqModel, max_tokens: 1024,
+      messages: [{ role: 'system', content: soul }, ...msgs],
+    }), { 'Authorization': 'Bearer ' + key });
+    text = res.choices?.[0]?.message?.content || '';
   } else {
     throw new Error('Unknown model: ' + model);
   }
@@ -264,11 +273,13 @@ function buildCloudInit(agentId: string, model: string, apiKeys?: Record<string,
   const anthropicKey = apiKeys?.anthropic || process.env.ANTHROPIC_API_KEY || "";
   const openaiKey = apiKeys?.openai || process.env.OPENAI_API_KEY || "";
   const googleKey = apiKeys?.google || process.env.GOOGLE_AI_API_KEY || "";
+  const groqKey = apiKeys?.groq || process.env.GROQ_API_KEY || "";
 
   const envSection = [
     anthropicKey ? `Environment="ANTHROPIC_API_KEY=${anthropicKey}"` : "",
     openaiKey    ? `Environment="OPENAI_API_KEY=${openaiKey}"` : "",
     googleKey    ? `Environment="GOOGLE_AI_API_KEY=${googleKey}"` : "",
+    groqKey      ? `Environment="GROQ_API_KEY=${groqKey}"` : "",
   ].filter(Boolean).join("\n");
 
   // Build initial config JSON

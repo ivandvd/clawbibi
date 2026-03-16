@@ -499,6 +499,7 @@ export const translations = {
     modelDescOpus: { en: "Most powerful, complex reasoning", ar: "الأقوى، تفكير معقد" } as T,
     modelDescGpt: { en: "OpenAI's flagship multimodal model", ar: "نموذج OpenAI الرئيسي متعدد الوسائط" } as T,
     modelDescGemini: { en: "Google's most capable model", ar: "أقوى نموذج من Google" } as T,
+    modelDescGroq: { en: "Free & ultra-fast — Llama 3.3 70B on Groq", ar: "مجاني وفائق السرعة — Llama 3.3 على Groq" } as T,
     noDataDash: { en: "--", ar: "--" } as T,
     daysAgo: { en: "14d ago", ar: "قبل ١٤ يوم" } as T,
     nameRequired: { en: "Agent name is required", ar: "اسم المساعد مطلوب" } as T,
