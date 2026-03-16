@@ -632,7 +632,7 @@ export default function GatewayPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-red-800">Provisioning failed</p>
-            <p className="text-xs text-red-600 mt-0.5">Server could not be created. Check that your Hetzner API key is valid, then delete this agent and try again.</p>
+            <p className="text-xs text-red-600 mt-0.5">Server could not be created. Please delete this agent and try again. If the issue persists, contact support.</p>
           </div>
         </div>
       )}

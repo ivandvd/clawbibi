@@ -10,8 +10,6 @@ export const profiles = pgTable("profiles", {
   country: text("country").default("AE"),
   plan: text("plan").default("none"), // none | byok | managed | enterprise
   role: text("role").default("user"), // user | admin
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
   paddleCustomerId: text("paddle_customer_id"),
   paddleSubscriptionId: text("paddle_subscription_id"),
   planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
@@ -27,7 +25,7 @@ export const agents = pgTable("agents", {
   status: text("status").default("creating"), // creating | provisioning | running | stopping | stopped | error
   subdomain: text("subdomain").unique(),
   ip: text("ip"),
-  provider: text("provider").default("hetzner"),
+  provider: text("provider").default("digitalocean"),
   serverId: text("server_id"),
   model: text("model").default("claude-4.5"),
   contextSize: integer("context_size").default(128000),
