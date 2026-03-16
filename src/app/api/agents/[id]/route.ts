@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { pushApiKeys, pushSoulMd, pushModelConfig, pushSkillsConfig, pushMemoryMd, pushHeartbeatMd } from "@/lib/ssh";
+import { pushApiKeys, pushSoulMd, pushModelConfig, pushSkillsConfig, pushMemoryMd, pushHeartbeatMd, pushIdentityMd, pushAgentsMd } from "@/lib/ssh";
 import { deprovisionAgent } from "@/lib/provision";
 
 // GET /api/agents/[id] — get agent details
@@ -46,7 +46,7 @@ export async function PATCH(
   const body = await request.json();
 
   // Separate SSH-synced fields from plain DB fields
-  const { api_keys, soul_md, skills, memory_md, heartbeat_md, ...dbFields } = body;
+  const { api_keys, soul_md, skills, memory_md, heartbeat_md, identity_md, agents_md, ...dbFields } = body;
 
   const { data: agent, error } = await supabase
     .from("agents")
@@ -55,8 +55,10 @@ export async function PATCH(
       ...(api_keys    !== undefined ? { api_keys }    : {}),
       ...(soul_md     !== undefined ? { soul_md }     : {}),
       ...(skills      !== undefined ? { skills }      : {}),
-      ...(memory_md   !== undefined ? { memory_md }   : {}),
+      ...(memory_md    !== undefined ? { memory_md }    : {}),
       ...(heartbeat_md !== undefined ? { heartbeat_md } : {}),
+      ...(identity_md  !== undefined ? { identity_md }  : {}),
+      ...(agents_md    !== undefined ? { agents_md }    : {}),
     })
     .eq("id", id)
     .eq("user_id", user.id)
@@ -117,6 +119,20 @@ export async function PATCH(
     if (heartbeat_md !== undefined) {
       pushHeartbeatMd(agent.ip, heartbeat_md).catch((err) =>
         console.error(`[ssh] HEARTBEAT.md push failed for agent ${id}:`, err)
+      );
+    }
+
+    // Push IDENTITY.md → ~/.openclaw/IDENTITY.md (+ restart)
+    if (identity_md !== undefined) {
+      pushIdentityMd(agent.ip, identity_md).catch((err) =>
+        console.error(`[ssh] IDENTITY.md push failed for agent ${id}:`, err)
+      );
+    }
+
+    // Push AGENTS.md → ~/.openclaw/AGENTS.md (no restart needed)
+    if (agents_md !== undefined) {
+      pushAgentsMd(agent.ip, agents_md).catch((err) =>
+        console.error(`[ssh] AGENTS.md push failed for agent ${id}:`, err)
       );
     }
   }

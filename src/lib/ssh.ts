@@ -241,6 +241,17 @@ export async function pushHeartbeatMd(ip: string, content: string): Promise<void
   await sshExec(ip, `echo '${b64}' | base64 -d > ~/.openclaw/HEARTBEAT.md && systemctl restart openclaw`);
 }
 
+export async function pushIdentityMd(ip: string, content: string): Promise<void> {
+  const b64 = Buffer.from(content).toString("base64");
+  await sshExec(ip, `echo '${b64}' | base64 -d > ~/.openclaw/IDENTITY.md`);
+  await sshExec(ip, "systemctl restart openclaw || true");
+}
+
+export async function pushAgentsMd(ip: string, content: string): Promise<void> {
+  const b64 = Buffer.from(content).toString("base64");
+  await sshExec(ip, `echo '${b64}' | base64 -d > ~/.openclaw/AGENTS.md`);
+}
+
 // ── WhatsApp QR pairing ───────────────────────────────────────────────────────
 // A self-contained Node.js script that installs @whiskeysockets/baileys on first
 // run, then streams the QR code to ~/.openclaw/whatsapp_qr.txt as a data URL.
