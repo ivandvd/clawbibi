@@ -230,6 +230,48 @@ async function gatherSkillContext(cfg, text) {
       if (typeof result === 'number' && isFinite(result)) parts.push('## Calculator Result\\n' + text.trim() + ' = ' + result);
     } catch {}
   }
+  if (sk['prayer-times'] && /prayer|salat|\\u0635\\u0644\\u0627\\u0629|\\u0627\\u0644\\u0635\\u0644\\u0627\\u0629/i.test(text)) {
+    try {
+      const cm = text.match(/(?:in|at|for|\\u0641\\u064a)\\s+([a-zA-Z][a-zA-Z\\s]{1,18})/i);
+      const city = cm ? encodeURIComponent(cm[1].trim()) : 'Riyadh';
+      const cityName = cm ? cm[1].trim() : 'Riyadh';
+      const raw = await httpGet('api.aladhan.com', '/v1/timingsByCity?city=' + city + '&country=SA&method=4', null);
+      const pr = JSON.parse(raw);
+      if (pr.data && pr.data.timings) {
+        const t = pr.data.timings;
+        parts.push('## Prayer Times (' + cityName + ')\\nFajr: ' + t.Fajr + ' | Dhuhr: ' + t.Dhuhr + ' | Asr: ' + t.Asr + ' | Maghrib: ' + t.Maghrib + ' | Isha: ' + t.Isha);
+      }
+    } catch {}
+  }
+  if (sk['currency']) {
+    const ccm = text.match(/(\\d+(?:[.,]\\d+)?)\\s*([A-Z]{3})\\s*(?:to|\\u0625\\u0644\\u0649|\\u062a\\u062d\\u0648\\u064a\\u0644)\\s*([A-Z]{3})/i);
+    if (ccm) {
+      try {
+        const amount = parseFloat(ccm[1].replace(',', '.'));
+        const from = ccm[2].toUpperCase();
+        const to = ccm[3].toUpperCase();
+        const raw = await httpGet('api.frankfurter.app', '/latest?from=' + from + '&to=' + to, null);
+        const fx = JSON.parse(raw);
+        if (fx.rates && fx.rates[to]) {
+          const result = (amount * fx.rates[to]).toFixed(2);
+          parts.push('## Currency\\n' + amount + ' ' + from + ' = ' + result + ' ' + to + ' (rate: ' + fx.rates[to] + ')');
+        }
+      } catch {}
+    }
+  }
+  if (sk['quran'] && /quran|\\u0642\\u0631\\u0622\\u0646|\\u0622\\u064a\\u0629/i.test(text)) {
+    const qcm = text.match(/(\\d{1,3}):(\\d{1,3})/);
+    if (qcm) {
+      try {
+        const ref = qcm[1] + ':' + qcm[2];
+        const raw = await httpGet('api.alquran.cloud', '/v1/ayah/' + ref + '/ar.alafasy', null);
+        const qr = JSON.parse(raw);
+        if (qr.data && qr.data.text) {
+          parts.push('## Quran ' + ref + '\\n' + qr.data.text);
+        }
+      } catch {}
+    }
+  }
   const custom = (cfg.skills && cfg.skills.custom) || [];
   for (let i = 0; i < custom.length; i++) {
     const tool = custom[i];
@@ -388,6 +430,99 @@ function startTelegram(tgConf) {
   return bot;
 }
 
+// ── WHATSAPP ──────────────────────────────────────────────────────────────────
+function startWhatsApp(waConf) {
+  var WA_AUTH_DIR = path.join(HOME, '.openclaw/whatsapp_auth');
+  try {
+    if (!fs.existsSync(WA_AUTH_DIR) || !fs.readdirSync(WA_AUTH_DIR).length) {
+      console.log('[whatsapp] No auth state — scan QR first from the dashboard');
+      return false;
+    }
+  } catch { return false; }
+  var baileys;
+  try { baileys = require('/opt/clawbibi/node_modules/@whiskeysockets/baileys'); }
+  catch (e) { console.error('[whatsapp] Baileys not installed:', e.message); return false; }
+  // Kill QR pairing script to avoid session conflict
+  try { require('child_process').execSync("pkill -f 'wa-setup.js' 2>/dev/null || true"); } catch {}
+  var makeWASocket = baileys.default || baileys.makeWASocket || baileys;
+  var useMultiFileAuthState = baileys.useMultiFileAuthState;
+  var DisconnectReason = baileys.DisconnectReason;
+  var pairingMode = waConf.dmPolicy || 'pairing';
+  var noWaLog = {
+    level: 'silent',
+    child: function() { return noWaLog; },
+    info: function() {}, error: function() {}, warn: function() {},
+    debug: function() {}, trace: function() {}, fatal: function() {},
+  };
+  function waConnect() {
+    useMultiFileAuthState(WA_AUTH_DIR).then(function(auth) {
+      var sock = makeWASocket({
+        auth: auth.state,
+        logger: noWaLog,
+        printQRInTerminal: false,
+        browser: ['Clawbibi', 'Chrome', '1.0.0'],
+      });
+      sock.ev.on('creds.update', auth.saveCreds);
+      sock.ev.on('connection.update', function(update) {
+        if (update.connection === 'open') {
+          console.log('[whatsapp] Connected and ready');
+        } else if (update.connection === 'close') {
+          var code = update.lastDisconnect && update.lastDisconnect.error && update.lastDisconnect.error.output
+            ? update.lastDisconnect.error.output.statusCode : 0;
+          var loggedOut = DisconnectReason && DisconnectReason.loggedOut;
+          if (code !== loggedOut) {
+            console.log('[whatsapp] Disconnected, reconnecting in 5s...');
+            setTimeout(waConnect, 5000);
+          } else {
+            console.log('[whatsapp] Logged out — rescan QR from dashboard');
+          }
+        }
+      });
+      sock.ev.on('messages.upsert', function(evt) {
+        if (evt.type !== 'notify') return;
+        (evt.messages || []).forEach(function(msg) {
+          if (msg.key.fromMe) return;
+          var jid = msg.key.remoteJid || '';
+          if (!jid || jid.endsWith('@broadcast')) return;
+          var userId = jid.replace(/@[^@]+$/, '');
+          var text = '';
+          if (msg.message) {
+            text = msg.message.conversation ||
+              (msg.message.extendedTextMessage && msg.message.extendedTextMessage.text) || '';
+          }
+          text = (text || '').trim();
+          if (!text) return;
+          var cfgNow = readJson(CONFIG, {});
+          var allowed = (cfgNow.allowed && cfgNow.allowed.whatsapp) || [];
+          if (pairingMode === 'pairing' && !allowed.includes(userId)) {
+            var ps = readJson(PAIRINGS, []);
+            if (!ps.some(function(p) { return p.platform === 'whatsapp' && p.identifier === userId; })) {
+              ps.push({ platform: 'whatsapp', identifier: userId, requestedAt: new Date().toISOString() });
+              writeJson(PAIRINGS, ps);
+            }
+            sock.sendMessage(jid, { text: '\\u{1F44B} Access request sent. Please wait for the owner to approve.' }).catch(function() {});
+            return;
+          }
+          appendLog({ platform: 'whatsapp', sender: userId, direction: 'in', content: text });
+          var t0 = Date.now();
+          askAI(cfgNow, 'wa:' + jid, text, userId).then(function(reply) {
+            avgMs = Math.round(avgMs * 0.8 + (Date.now() - t0) * 0.2);
+            appendLog({ platform: 'whatsapp', sender: 'agent', direction: 'out', content: reply });
+            writeStatus({ avgResponseMs: avgMs });
+            return sock.sendMessage(jid, { text: reply });
+          }).catch(function(e) {
+            console.error('[whatsapp] AI error:', e.message);
+            sock.sendMessage(jid, { text: '\\u26A0\\uFE0F Sorry, I hit an error.' }).catch(function() {});
+          });
+        });
+      });
+    }).catch(function(e) { console.error('[whatsapp] Auth load error:', e.message); });
+  }
+  waConnect();
+  console.log('[whatsapp] Starting...');
+  return true;
+}
+
 // ── HEARTBEAT CRON ────────────────────────────────────────────────────────────
 function startHeartbeat(bot, cfgArg) {
   let hbMd = '';
@@ -436,6 +571,10 @@ let started = 0;
 if (channels.telegram?.enabled && channels.telegram?.botToken) {
   const tgBot = startTelegram(channels.telegram);
   if (tgBot) { started++; startHeartbeat(tgBot, cfg); }
+}
+
+if (channels.whatsapp && channels.whatsapp.enabled) {
+  if (startWhatsApp(channels.whatsapp)) started++;
 }
 
 console.log('[runtime] Clawbibi agent runtime started. Channels active: ' + started);

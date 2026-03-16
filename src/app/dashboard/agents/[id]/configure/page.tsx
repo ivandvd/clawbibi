@@ -56,12 +56,15 @@ const AVAILABLE_MODELS = [
 
 const BUILTIN_SKILLS = [
   { id: "web-search",       name: "Web Search",        desc: "Search the internet for current information",           icon: "🔍" },
-  { id: "calculator",       name: "Calculator",         desc: "Perform math, currency, and unit calculations",         icon: "🔢" },
-  { id: "code-interpreter", name: "Code Interpreter",  desc: "Write and execute Python/JS code to solve problems",    icon: "💻" },
-  { id: "image-gen",        name: "Image Generation",  desc: "Generate images from text prompts (DALL-E / SD)",       icon: "🎨" },
+  { id: "calculator",       name: "Calculator",         desc: "Evaluate math expressions instantly",                   icon: "🔢" },
   { id: "weather",          name: "Weather",            desc: "Get live weather forecasts for any city",               icon: "🌤" },
-  { id: "summariser",       name: "Summariser",         desc: "Summarise long documents, URLs, and YouTube videos",    icon: "📄" },
-  { id: "translator",       name: "Translator",         desc: "Translate between Arabic, English, and 50+ languages",  icon: "🌐" },
+  { id: "prayer-times",     name: "Prayer Times",       desc: "Real-time salah times for any city via aladhan.com",    icon: "🕌" },
+  { id: "currency",         name: "Currency Exchange",  desc: "Live exchange rates — e.g. 100 USD to SAR",             icon: "💱" },
+  { id: "quran",            name: "Quran Lookup",       desc: "Fetch any ayah by reference — e.g. 2:255",              icon: "📖" },
+  { id: "summariser",       name: "Summariser",         desc: "Summarise long documents, URLs, and YouTube videos",    icon: "📄", comingSoon: true },
+  { id: "translator",       name: "Translator",         desc: "Translate between Arabic, English, and 50+ languages",  icon: "🌐", comingSoon: true },
+  { id: "code-interpreter", name: "Code Interpreter",  desc: "Write and execute Python/JS code to solve problems",    icon: "💻", comingSoon: true },
+  { id: "image-gen",        name: "Image Generation",  desc: "Generate images from text prompts (DALL-E / SD)",       icon: "🎨", comingSoon: true },
   { id: "reminder",         name: "Reminders",          desc: "Set reminders and scheduled messages",                  icon: "⏰", comingSoon: true },
 ] as const;
 
