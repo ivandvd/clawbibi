@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { nanoid } from "nanoid";
 import { provisionAgent } from "@/lib/provision";
 import { getAgentLimit } from "@/lib/billing/plans";
@@ -80,8 +81,9 @@ export async function POST(request: Request) {
   }
   // ────────────────────────────────────────────────────────────────────────
 
-  // Ensure profile row exists (FK guard)
-  await supabase.from("profiles").upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true });
+  // Ensure profile row exists (FK guard) — use admin client to bypass RLS
+  const admin = createAdminClient();
+  await admin.from("profiles").upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true });
 
   const id = nanoid(8);
   const subdomain = `${id}.clawbibi.cloud`;
