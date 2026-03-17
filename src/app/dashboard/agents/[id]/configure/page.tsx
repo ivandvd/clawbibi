@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 
@@ -90,6 +90,7 @@ function nanoid6() {
 export default function ConfigurePage() {
   const { t, isRTL } = useLanguage();
   const params = useParams();
+  const router = useRouter();
   const agentId = params.id as string;
 
   const [activeTab, setActiveTab]       = useState<Tab>("identity");
@@ -97,6 +98,8 @@ export default function ConfigurePage() {
   const [saving, setSaving]             = useState(false);
   const [saved, setSaved]               = useState(false);
   const [saveError, setSaveError]       = useState<string | null>(null);
+  const [deleting, setDeleting]         = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [soulMd, setSoulMd]             = useState("");
   const [identityMd, setIdentityMd]     = useState("");
@@ -202,6 +205,16 @@ export default function ConfigurePage() {
 
   const removeCustomTool = (id: string) => {
     setSkills(prev => ({ ...prev, custom: prev.custom.filter(t => t.id !== id) }));
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await fetch(`/api/agents/${agentId}`, { method: "DELETE" });
+      router.push("/dashboard/agents");
+    } catch {
+      setDeleting(false);
+    }
   };
 
   const isRunning   = agentStatus === "running";
@@ -688,6 +701,30 @@ export default function ConfigurePage() {
               <input type="range" min={256} max={16384} step={256} value={maxTokens}
                 onChange={(e) => setMaxTokens(Number(e.target.value))} className="w-full accent-[#6366f1] h-2 rounded-full cursor-pointer" />
               <div className="flex justify-between text-xs text-[#c5c9cd] mt-2"><span>256</span><span>16,384</span></div>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="bg-white rounded-2xl border border-red-200 p-6">
+              <h3 className="text-sm font-semibold text-red-600 mb-1">Danger Zone</h3>
+              <p className="text-xs text-[#949aa0] mb-4">Permanently delete this agent and its server. This cannot be undone.</p>
+              {!confirmDelete ? (
+                <button onClick={() => setConfirmDelete(true)}
+                  className="px-4 py-2 rounded-xl border border-red-300 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors">
+                  Delete Agent
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-red-600 font-medium">Are you sure? This is permanent.</p>
+                  <button onClick={handleDelete} disabled={deleting}
+                    className="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+                    {deleting ? "Deleting..." : "Yes, Delete"}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)}
+                    className="px-4 py-2 rounded-xl border border-[#e5e7eb] text-[#4a4a5a] text-xs hover:bg-[#f6f9fa] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
