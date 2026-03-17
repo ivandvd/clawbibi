@@ -80,6 +80,9 @@ export async function POST(request: Request) {
   }
   // ────────────────────────────────────────────────────────────────────────
 
+  // Ensure profile row exists (FK guard)
+  await supabase.from("profiles").upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true });
+
   const id = nanoid(8);
   const subdomain = `${id}.clawbibi.cloud`;
 
