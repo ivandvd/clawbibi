@@ -678,7 +678,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 # ── System update ─────────────────────────────────────────────────────────────
 apt-get update -qq
-apt-get install -y curl wget nodejs npm default-jre-headless 2>/dev/null
+apt-get install -y curl wget nodejs npm 2>/dev/null
 
 # Install Node.js 20 (if system version is too old)
 node --version | grep -qE 'v(1[89]|2[0-9])' 2>/dev/null || {
