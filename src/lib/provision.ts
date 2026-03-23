@@ -676,6 +676,10 @@ function buildCloudInit(agentId: string, model: string, apiKeys?: Record<string,
 set -e
 export DEBIAN_FRONTEND=noninteractive
 
+# ── Disable root password expiry (prevents PAM blocking SSH commands) ─────────
+chage -M -1 root 2>/dev/null || true
+passwd -u root 2>/dev/null || true
+
 # ── System update ─────────────────────────────────────────────────────────────
 apt-get update -qq
 apt-get install -y curl wget nodejs npm 2>/dev/null
@@ -778,13 +782,17 @@ systemctl enable openclaw
 systemctl start openclaw
 
 # ── Notify Clawbibi dashboard ─────────────────────────────────────────────────
+# Get public IP (used for DNS record creation in the ready webhook)
+SERVER_IP=$(curl -4s --max-time 10 https://api.ipify.org 2>/dev/null || echo "")
+echo "[boot] Public IP: $SERVER_IP"
+
 # Wait for runtime to fully initialise before calling the ready webhook
 sleep 15
 for i in 1 2 3 4 5; do
   HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${appUrl}/api/agents/${agentId}/ready" \\
     -H "Content-Type: application/json" \\
     -H "x-provision-secret: ${secret}" \\
-    -d '{"status":"running"}') && [ "$HTTP" = "200" ] && break
+    -d "{\"status\":\"running\",\"ip\":\"$SERVER_IP\"}") && [ "$HTTP" = "200" ] && break
   echo "[boot] Ready webhook attempt $i failed (HTTP $HTTP), retrying in 15s..."
   sleep 15
 done
@@ -816,23 +824,17 @@ export async function provisionAgent(
     const userData = buildCloudInit(agentId, model, apiKeys);
     const droplet = await createDroplet({ name: `clawbibi-${agentId}`, userData });
 
-    console.log(`[provision] Droplet created: id=${droplet.id}, waiting for IP...`);
+    console.log(`[provision] Droplet created: id=${droplet.id}. IP + DNS will be set by ready webhook.`);
 
-    // DigitalOcean assigns IPs asynchronously — poll until available
-    const ip = await waitForDropletIp(droplet.id);
-
-    console.log(`[provision] Droplet ready: id=${droplet.id}, ip=${ip}`);
-
+    // Save server_id immediately — don't wait for IP (Vercel would time out).
+    // The cloud-init script will get its own IP via api.ipify.org and send it
+    // to the ready webhook, which then saves it and creates the DNS record.
     await db.from("agents").update({
       server_id: String(droplet.id),
-      ip,
       status: "provisioning",
     }).eq("id", agentId);
 
-    await createDnsRecord(subdomain, ip);
-    console.log(`[provision] DNS created: ${subdomain} → ${ip}`);
-
-    console.log(`[provision] Boot in progress for agent ${agentId}. Waiting for ready webhook...`);
+    console.log(`[provision] Agent ${agentId} is provisioning. Waiting for ready webhook from server...`);
 
   } catch (err) {
     console.error(`[provision] Failed for agent ${agentId}:`, err);
